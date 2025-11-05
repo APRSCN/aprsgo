@@ -1,2 +1,2 @@
 # aprsgo
-An aprs core server with GoLang
+An aprs core server with Golang
