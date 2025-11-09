@@ -10,7 +10,7 @@ import (
 
 // CustomHeader sets custom header
 func CustomHeader(c fiber.Ctx) error {
-	c.Set("X-Powered-By", fmt.Sprintf("%s %s %s", config.ENName, config.Version, config.Nickname))
+	c.Set("Server", fmt.Sprintf("%s/%s %s", config.ENName, config.Version, config.Nickname))
 
 	return c.Next()
 }

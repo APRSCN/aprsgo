@@ -64,7 +64,7 @@ func fiberAPP() *fiber.App {
 	// Root info router handler
 	app.All("/api", func(c fiber.Ctx) error {
 		return model.RespSuccess(c, map[string]any{
-			"poweredBy": fmt.Sprintf("%s %s %s", config.ENName, config.Version, config.Nickname),
+			"server": fmt.Sprintf("%s/%s %s", config.ENName, config.Version, config.Nickname),
 		})
 	})
 
