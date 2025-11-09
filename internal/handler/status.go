@@ -21,7 +21,7 @@ func Status(c fiber.Ctx) error {
 		Server: model.Server{
 			Admin:    config.C.GetString("admin.name"),
 			Email:    config.C.GetString("admin.email"),
-			OS:       fmt.Sprintf("%s %s", utils.FirstUpper(runtime.GOOS), runtime.GOARCH),
+			OS:       fmt.Sprintf("%s %s", utils.PrettierOSName(), runtime.GOARCH),
 			ID:       config.C.GetString("server.id"),
 			Software: config.ENName,
 			Version:  fmt.Sprintf("%s %s", config.Version, config.Nickname),
