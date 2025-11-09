@@ -9,7 +9,6 @@ import (
 	"github.com/APRSCN/aprsgo/internal/middleware"
 	"github.com/APRSCN/aprsgo/internal/model"
 
-	"github.com/bytedance/sonic"
 	"github.com/go-playground/validator/v10"
 	fiberzap "github.com/gofiber/contrib/v3/zap"
 	"github.com/gofiber/fiber/v3"
@@ -34,8 +33,6 @@ func (v *structValidator) Validate(out any) error {
 // fiberAPP provides a fiber app
 func fiberAPP() *fiber.App {
 	app := fiber.New(fiber.Config{
-		JSONEncoder:     sonic.Marshal,
-		JSONDecoder:     sonic.Unmarshal,
 		ProxyHeader:     fiber.HeaderXForwardedFor,
 		StructValidator: &structValidator{validate: validator.New()},
 	})
