@@ -1,11 +1,10 @@
 package listener
 
 import (
-	"encoding/json"
-
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/APRSCN/aprsgo/internal/model"
+	"github.com/APRSCN/aprsgo/pkg/utils"
 	"go.uber.org/zap"
 )
 
@@ -41,12 +40,12 @@ func load() {
 
 	// Load config
 	var listenersConfig []model.ListenerConfig
-	marshalled, err := json.Marshal(config.C.Get("server.listeners"))
+	marshalled, err := utils.Marshal(config.C.Get("server.listeners"))
 	if err != nil {
 		logger.L.Error("Error loading listeners config", zap.Error(err))
 		return
 	}
-	err = json.Unmarshal(marshalled, &listenersConfig)
+	err = utils.Unmarshal(marshalled, &listenersConfig)
 	if err != nil {
 		logger.L.Error("Error loading listeners config", zap.Error(err))
 	}
