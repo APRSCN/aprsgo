@@ -1,0 +1,66 @@
+debug: true
+server:
+  # Your server ID
+  id: "N0CALL"
+  # Passcode for the server ID
+  passcode: 0
+  # Setting of http status panel
+  status:
+    host: "[::]"
+    port: 14501
+  # Setting of aprs server
+  # Type: fullfeed [Everything] / igate [IGate / Client Port]
+  aprs:
+    -
+      name: "Full Feed"
+      type: "fullfeed"
+      protocol: "tcp"
+      host: "[::]"
+      port: 10152
+      visible: "hidden"
+    - name: "Full Feed"
+      type: "fullfeed"
+      protocol: "udp"
+      host: "[::]"
+      port: 10152
+      visible: "hidden"
+    - name: "Client-Defined Filters"
+      type: "igate"
+      protocol: "tcp"
+      host: "[::]"
+      port: 14580
+    - name: "Client-Defined Filters"
+      type: "igate"
+      protocol: "udp"
+      host: "[::]"
+      port: 14580
+  #    - name: "350 km from my position"
+  #      type: "igate"
+  #      protocol: "tcp"
+  #      host: "[::]"
+  #      port: 20350
+  #      filter: "m/350"
+  #    - name: "350 km from my position"
+  #      type: "igate"
+  #      protocol: "udp"
+  #      host: "[::]"
+  #      port: 20350
+  #      filter: "m/350"
+  # Setting of uplink
+  # Type: full [Full Feed] / ro [Read-Only]
+  uplink:
+    -
+      name: "Core Rotate"
+      type: "full"
+      protocol: "tcp"
+      host: "rotate.aprs.net"
+      port: 10152
+admin:
+  name: "Name, MYCALL"
+  email: "email@example.com"
+log:
+  file: "logs/app.log"
+  maxSize: 100
+  maxBackups: 10
+  maxAge: 30
+  compress: true
