@@ -61,15 +61,8 @@ func fiberAPP() *fiber.App {
 	// Use customer header middleware
 	app.Use(middleware.CustomHeader)
 
-	// Root info router handler
-	app.All("/api", func(c fiber.Ctx) error {
-		return model.RespSuccess(c, map[string]any{
-			"server": fmt.Sprintf("%s/%s %s", config.ENName, config.Version, config.Nickname),
-		})
-	})
-
-	// Register global routes
-	Register(app)
+	// Status info handler
+	app.All("/status", Status)
 
 	// Not found router handler
 	app.Use(func(c fiber.Ctx) error {
