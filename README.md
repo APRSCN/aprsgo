@@ -1,6 +1,8 @@
 # APRSGO
 An APRS core server with Golang
 
+We are still under development. Welcome to contribute!
+
 ![Gopher image](https://github.com/APRSCN/aprsgo/blob/main/gopher.webp?raw=true)
 *Gopher image by [Ian Xia](https://www.ianxia.com), licensed under [Creative Commons 4.0 Attribution license][cc4-by].*
 
