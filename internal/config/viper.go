@@ -1,10 +1,15 @@
 package config
 
 import (
+	"time"
+
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )
 
 var C *viper.Viper
+var OnChange []func()
+var lastLoad time.Time
 
 // staticConfig is constructor of static config
 func staticConfig() *viper.Viper {
@@ -39,6 +44,23 @@ func staticConfig() *viper.Viper {
 
 	// Watch config change
 	cfg.WatchConfig()
+
+	// Record first load
+	lastLoad = time.Now()
+
+	// Trigger to reload
+	cfg.OnConfigChange(func(e fsnotify.Event) {
+		// Debounce
+		if lastLoad.Add(time.Second * 1).After(time.Now()) {
+			return
+		}
+
+		for _, fn := range OnChange {
+			fn()
+		}
+
+		lastLoad = time.Now()
+	})
 
 	return cfg
 }

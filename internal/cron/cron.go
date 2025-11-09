@@ -1,6 +1,7 @@
 package cron
 
 import (
+	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/robfig/cron/v3"
 )
 
@@ -13,6 +14,8 @@ func InitCron() {
 	registerDefault()
 
 	C.Start()
+
+	logger.L.Debug("Cron initialized")
 }
 
 // registerDefault registers default cron tasks

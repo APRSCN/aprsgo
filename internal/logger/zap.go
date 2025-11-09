@@ -72,5 +72,10 @@ func InitLogger() {
 	// Create zap logger
 	L = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
 
+	// Add config change notifier
+	config.OnChange = append(config.OnChange, func() {
+		L.Info("Config file changed")
+	})
+
 	L.Debug("Logger initialized")
 }

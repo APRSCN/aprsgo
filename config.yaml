@@ -10,7 +10,7 @@ server:
     port: 14501
   # Setting of aprs server
   # Type: fullfeed [Everything] / igate [IGate / Client Port]
-  aprs:
+  listeners:
     -
       name: "Full Feed"
       type: "fullfeed"
@@ -48,7 +48,7 @@ server:
   #      filter: "m/350"
   # Setting of uplink
   # Type: full [Full Feed] / ro [Read-Only]
-  uplink:
+  uplinks:
     -
       name: "Core Rotate"
       type: "full"
