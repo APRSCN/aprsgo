@@ -4,8 +4,10 @@ import (
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/cron"
 	"github.com/APRSCN/aprsgo/internal/handler"
+	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/listener"
 	"github.com/APRSCN/aprsgo/internal/logger"
+	"github.com/APRSCN/aprsgo/internal/system"
 
 	"go.uber.org/zap"
 )
@@ -19,6 +21,12 @@ func main() {
 	defer func(L *zap.Logger) {
 		_ = L.Sync()
 	}(logger.L)
+
+	// Init history DB
+	historydb.InitHistoryDB()
+
+	// Init system daemon
+	system.InitSystem()
 
 	// Init listener
 	listener.InitListener()

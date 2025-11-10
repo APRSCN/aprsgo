@@ -1,5 +1,7 @@
 debug: true
 server:
+  # Memory limit in MB
+  memory: 100
   # Your server ID
   id: "N0CALL"
   # Passcode for the server ID

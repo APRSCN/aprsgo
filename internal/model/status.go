@@ -2,14 +2,18 @@ package model
 
 // ReturnServer provides a struct to return basic server info
 type ReturnServer struct {
-	Admin    string `json:"admin"`
-	Email    string `json:"email"`
-	OS       string `json:"os"`
-	ID       string `json:"id"`
-	Software string `json:"software"`
-	Version  string `json:"version"`
-	TimeNow  int64  `json:"timeNow"`
-	Uptime   int64  `json:"uptime"`
+	Admin    string  `json:"admin"`
+	Email    string  `json:"email"`
+	OS       string  `json:"os"`
+	ID       string  `json:"id"`
+	Software string  `json:"software"`
+	Version  string  `json:"version"`
+	TimeNow  int64   `json:"timeNow"`
+	Uptime   int64   `json:"uptime"`
+	Model    string  `json:"model"`
+	Percent  float64 `json:"percent"`
+	Total    float64 `json:"total"`
+	Used     float64 `json:"used"`
 }
 
 // ReturnListener provides a struct to return listener info

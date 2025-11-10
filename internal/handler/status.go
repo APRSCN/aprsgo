@@ -8,8 +8,10 @@ import (
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/listener"
 	"github.com/APRSCN/aprsgo/internal/model"
+	"github.com/APRSCN/aprsgo/internal/system"
 	"github.com/APRSCN/aprsgo/pkg/utils"
 	"github.com/gofiber/fiber/v3"
+	"github.com/shirou/gopsutil/v4/cpu"
 )
 
 // Status returns status as JSON
@@ -33,6 +35,26 @@ func Status(c fiber.Ctx) error {
 		})
 	}
 
+	// Get CPU model
+	var cpuModel string
+	var cpuNum int32 = 0
+	for {
+		info, err := cpu.Info()
+		if err != nil {
+			continue
+		}
+		cpuModel = info[0].ModelName
+
+		for _, u := range info {
+			cpuNum += u.Cores
+		}
+
+		if cpuNum > 1 {
+			cpuModel = fmt.Sprintf("%d x %s", cpuNum, cpuModel)
+		}
+		break
+	}
+
 	return model.Resp(c, model.Return{
 		Msg: "success",
 		Server: model.ReturnServer{
@@ -44,6 +66,10 @@ func Status(c fiber.Ctx) error {
 			Version:  fmt.Sprintf("%s %s", config.Version, config.Nickname),
 			TimeNow:  timeNow.Unix(),
 			Uptime:   int64(timeNow.Sub(config.Uptime).Seconds()),
+			Model:    cpuModel,
+			Percent:  system.Status.Percent,
+			Total:    system.Status.Total,
+			Used:     system.Status.Used,
 		},
 		Listeners: listeners,
 	})

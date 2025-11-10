@@ -30,7 +30,7 @@ func InitListener() {
 		load()
 	})
 
-	logger.L.Debug("ReturnListener initialized")
+	logger.L.Debug("Listener initialized")
 }
 
 // load listener from config
