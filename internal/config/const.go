@@ -2,7 +2,7 @@ package config
 
 import "time"
 
-const ENName = "aprsgo"
+const ENName = "APRSGo"
 const Nickname = "Ampere"
 const Version = "0.0.1"
 

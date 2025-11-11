@@ -8,6 +8,7 @@ import (
 	"github.com/APRSCN/aprsgo/internal/listener"
 	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/APRSCN/aprsgo/internal/system"
+	"github.com/APRSCN/aprsgo/internal/uplink"
 
 	"go.uber.org/zap"
 )
@@ -27,6 +28,9 @@ func main() {
 
 	// Init system daemon
 	system.InitSystem()
+
+	// Init uplink
+	uplink.InitUplink()
 
 	// Init listener
 	listener.InitListener()

@@ -11,49 +11,49 @@ server:
     host: "[::]"
     port: 14501
   # Setting of aprs server
-  # Type: fullfeed [Everything] / igate [IGate / Client Port]
+  # Mode: fullfeed [Everything] / igate [IGate / Client Port]
   listeners:
     -
       name: "Full Feed"
-      type: "fullfeed"
+      mode: "fullfeed"
       protocol: "tcp"
       host: "[::]"
       port: 10152
       visible: "hidden"
     - name: "Full Feed"
-      type: "fullfeed"
+      mode: "fullfeed"
       protocol: "udp"
       host: "[::]"
       port: 10152
       visible: "hidden"
     - name: "Client-Defined Filters"
-      type: "igate"
+      mode: "igate"
       protocol: "tcp"
       host: "[::]"
       port: 14580
     - name: "Client-Defined Filters"
-      type: "igate"
+      mode: "igate"
       protocol: "udp"
       host: "[::]"
       port: 14580
   #    - name: "350 km from my position"
-  #      type: "igate"
+  #      mode: "igate"
   #      protocol: "tcp"
   #      host: "[::]"
   #      port: 20350
   #      filter: "m/350"
   #    - name: "350 km from my position"
-  #      type: "igate"
+  #      mode: "igate"
   #      protocol: "udp"
   #      host: "[::]"
   #      port: 20350
   #      filter: "m/350"
   # Setting of uplink
-  # Type: full [Full Feed] / ro [Read-Only]
+  # Mode: full [Full Feed] / ro [Read-Only]
   uplinks:
     -
       name: "Core Rotate"
-      type: "full"
+      mode: "full"
       protocol: "tcp"
       host: "rotate.aprs.net"
       port: 10152

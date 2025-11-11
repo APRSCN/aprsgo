@@ -53,7 +53,7 @@ func load() {
 	for _, listener := range listenersConfig {
 		Listeners = append(Listeners, Listener{
 			Name:     listener.Name,
-			Type:     listener.Type,
+			Type:     listener.Mode,
 			Protocol: listener.Protocol,
 			Host:     listener.Host,
 			Port:     listener.Port,

@@ -9,6 +9,7 @@ import (
 	"github.com/APRSCN/aprsgo/internal/listener"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsgo/internal/system"
+	"github.com/APRSCN/aprsgo/internal/uplink"
 	"github.com/APRSCN/aprsgo/pkg/utils"
 	"github.com/gofiber/fiber/v3"
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -48,7 +49,7 @@ func Status(c fiber.Ctx) error {
 		}
 		listeners = append(listeners, model.ReturnListener{
 			Name:     l.Name,
-			Type:     l.Type,
+			Mode:     l.Type,
 			Protocol: l.Protocol,
 			Host:     l.Host,
 			Port:     l.Port,
@@ -71,6 +72,16 @@ func Status(c fiber.Ctx) error {
 			Percent:  system.Status.Percent,
 			Total:    system.Status.Total,
 			Used:     system.Status.Used,
+		},
+		Uplink: model.ReturnUplink{
+			ID:       uplink.Client.Callsign(),
+			Mode:     uplink.Client.Mode(),
+			Protocol: uplink.Client.Protocol(),
+			Host:     uplink.Client.Host(),
+			Port:     uplink.Client.Port(),
+			Server:   uplink.Client.Server(),
+			Up:       uplink.Client.Up(),
+			Uptime:   uplink.Client.Uptime(),
 		},
 		Listeners: listeners,
 	})
