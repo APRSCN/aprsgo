@@ -4,9 +4,15 @@ import (
 	"sync"
 )
 
+// StreamData is the basic struct for stream write
+type StreamData struct {
+	Data   string
+	Writer any
+}
+
 // DataStream provides a basic struct to build data Stream
 type DataStream struct {
-	subscribers []chan string
+	subscribers []chan StreamData
 	mu          sync.RWMutex
 	bufferSize  int
 }
@@ -14,19 +20,22 @@ type DataStream struct {
 // NewDataStream creates a new data Stream
 func NewDataStream(bufferSize int) *DataStream {
 	return &DataStream{
-		subscribers: make([]chan string, 0),
+		subscribers: make([]chan StreamData, 0),
 		bufferSize:  bufferSize,
 	}
 }
 
 // Write data to Stream
-func (ds *DataStream) Write(data string) {
+func (ds *DataStream) Write(data string, writer any) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
 	for _, ch := range ds.subscribers {
 		select {
-		case ch <- data:
+		case ch <- StreamData{
+			Data:   data,
+			Writer: writer,
+		}:
 		default:
 			// Skip full chan
 		}
@@ -34,11 +43,11 @@ func (ds *DataStream) Write(data string) {
 }
 
 // Subscribe a Stream
-func (ds *DataStream) Subscribe() (<-chan string, func()) {
+func (ds *DataStream) Subscribe() (<-chan StreamData, func()) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	ch := make(chan string, ds.bufferSize)
+	ch := make(chan StreamData, ds.bufferSize)
 	ds.subscribers = append(ds.subscribers, ch)
 
 	unsubscribe := func() {

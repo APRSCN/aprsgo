@@ -32,6 +32,7 @@ type Client struct {
 	Last     time.Time `json:"last"`
 	Software string    `json:"software"`
 	Version  string    `json:"version"`
+	Filter   string    `json:"filter"`
 	c        *TCPAPRSClient
 }
 

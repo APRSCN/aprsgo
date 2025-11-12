@@ -61,6 +61,7 @@ type ReturnClient struct {
 	Last     time.Time `json:"last"`
 	Software string    `json:"software"`
 	Version  string    `json:"version"`
+	Filter   string    `json:"filter"`
 }
 
 // ReturnStatus provides a struct to return status of server

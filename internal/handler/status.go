@@ -101,6 +101,7 @@ func Status(c fiber.Ctx) error {
 			Last:     v.Last,
 			Software: v.Software,
 			Version:  v.Version,
+			Filter:   v.Filter,
 		})
 	}
 

@@ -64,8 +64,13 @@ func selectUplink() {
 				continue
 			}
 
+			// Subscribe for uplink
+			ch, closeFn := Stream.Subscribe()
+			go sender(ch)
+
 			// Waiting
 			Client.Wait()
+			closeFn()
 		}
 	}
 }

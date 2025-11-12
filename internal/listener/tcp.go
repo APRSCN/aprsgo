@@ -30,8 +30,9 @@ type TCPAPRSClient struct {
 	version     string
 	mu          sync.Mutex
 	unsubscribe func()
-	dataCh      <-chan string
+	dataCh      <-chan uplink.StreamData
 	mode        client.Mode
+	filter      string
 }
 
 // TCPAPRSServer provides a struct for APRS server
@@ -206,12 +207,16 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 		case "vers":
 			client.software = parts[k+1]
 			client.version = parts[k+2]
+		// Server commands
+		case "filter":
+			client.filter = parts[k+1]
 		}
 	}
 	// Record client
 	Clients[client].ID = callSign
 	Clients[client].Software = client.software
 	Clients[client].Version = client.version
+	Clients[client].Filter = client.filter
 
 	// Kick old client
 	for k, v := range Clients {
@@ -256,6 +261,8 @@ func (s *TCPAPRSServer) handleAPRSData(client *TCPAPRSClient, packet string) {
 		return
 	}
 
+	uplink.Stream.Write(packet, client)
+
 	fmt.Printf("APRS data from %s: %s\n", client.callSign, packet)
 }
 
@@ -266,8 +273,13 @@ func (c *TCPAPRSClient) handleUplinkData() {
 		if c.loggedIn && c.conn != nil {
 			switch c.mode {
 			case client.Fullfeed:
-				_ = c.Send(data)
+				_ = c.Send(data.Data)
 			case client.IGate:
+				if c.filter != "" {
+					if data.Writer != c {
+						_ = c.Send(data.Data)
+					}
+				}
 			}
 		}
 		c.mu.Unlock()

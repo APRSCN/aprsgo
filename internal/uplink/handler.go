@@ -1,7 +1,6 @@
 package uplink
 
 import (
-	"bytes"
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/historydb"
@@ -9,15 +8,13 @@ import (
 	"go.uber.org/zap"
 )
 
-var Packets bytes.Buffer
-
 // packetHandler is the packet handler of uplink
 func packetHandler(packet string) {
 	// Get time now
 	now := time.Now()
 
 	// Write packet to stream
-	Stream.Write(packet)
+	Stream.Write(packet, "uplink")
 
 	// Record last receive time
 	err := historydb.C.Set([]byte("uplink.last"), []byte(time.Now().Format(time.RFC3339Nano)), 0)
@@ -43,5 +40,15 @@ func packetHandler(packet string) {
 	if err != nil {
 		logger.L.Warn("Failed to clear data points for uplink.packet.rx.speed", zap.Error(err))
 		return
+	}
+}
+
+// sender sends data to uplink
+func sender(dataCh <-chan StreamData) {
+	for data := range dataCh {
+		if data.Writer != "uplink" {
+			// TODO: filter and dupecheck here
+			_ = Client.SendPacket(data.Data)
+		}
 	}
 }
