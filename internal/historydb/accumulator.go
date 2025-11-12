@@ -119,7 +119,15 @@ func GetValue(key string) (float64, error) {
 	// Get data from DB
 	existingData, err := C.Get([]byte(key))
 	if err != nil {
-		return 0, err
+		if errors.Is(err, freecache.ErrNotFound) {
+			err = SetValue(key, 0)
+			if err != nil {
+				return 0, err
+			}
+			return 0, nil
+		} else {
+			return 0, err
+		}
 	}
 
 	// DeserializeSeries

@@ -39,7 +39,19 @@ func stats() {
 			logger.L.Warn("Failed to record stats.uplink.bytes.rx", zap.Error(err))
 		}
 
-		// TODO: Add packet tx speed stats
+		// Record packet tx speed
+		txRecent, err := historydb.GetDataSlice("uplink.packet.tx.speed")
+		if err != nil {
+			logger.L.Warn("Failed to read uplink.packet.tx.speed", zap.Error(err))
+		} else {
+			err = historydb.RecordDataPoint("stats.uplink.packet.tx", [2]any{
+				float64(now.UnixNano()) / 1e9,
+				len(txRecent),
+			})
+			if err != nil {
+				logger.L.Warn("Failed to record stats.uplink.packet.tx", zap.Error(err))
+			}
+		}
 
 		// Record bytes tx speed
 		err = historydb.RecordDataPoint("stats.uplink.bytes.tx", [2]any{

@@ -4,8 +4,6 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/historydb"
-	"github.com/APRSCN/aprsgo/internal/logger"
-	"go.uber.org/zap"
 )
 
 // packetHandler is the packet handler of uplink
@@ -28,17 +26,12 @@ func packetHandler(packet string) {
 		return
 	}
 
+	// Write rx mark
 	err = historydb.RecordDataPoint("uplink.packet.rx.speed", [2]any{
 		float64(now.UnixNano()) / 1e9,
 		nil,
 	})
 	if err != nil {
-		return
-	}
-	// Clear expired data
-	err = historydb.ClearDataSlice("uplink.packet.rx.speed", 1)
-	if err != nil {
-		logger.L.Warn("Failed to clear data points for uplink.packet.rx.speed", zap.Error(err))
 		return
 	}
 }
@@ -47,8 +40,26 @@ func packetHandler(packet string) {
 func sender(dataCh <-chan StreamData) {
 	for data := range dataCh {
 		if data.Writer != "uplink" {
+			// Get time now
+			now := time.Now()
+
 			// TODO: filter and dupecheck here
 			_ = Client.SendPacket(data.Data)
+
+			// Count packet tx
+			err := historydb.IncrementValue("uplink.packet.tx.count", 1)
+			if err != nil {
+				return
+			}
+
+			// Write tx mark
+			err = historydb.RecordDataPoint("uplink.packet.tx.speed", [2]any{
+				float64(now.UnixNano()) / 1e9,
+				nil,
+			})
+			if err != nil {
+				return
+			}
 		}
 	}
 }

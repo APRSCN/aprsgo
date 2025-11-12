@@ -58,7 +58,7 @@ func RecordDataPoint(key string, newPoint [2]any) error {
 		}
 	} else {
 		timeSeries = TimeSeriesData{
-			DataPoints: [][2]any{},
+			DataPoints: make([][2]any, 0),
 		}
 	}
 
@@ -87,7 +87,23 @@ func GetDataSlice(key string) ([][2]any, error) {
 	// Get data from DB
 	existingData, err := C.Get([]byte(key))
 	if err != nil {
-		return make([][2]any, 0), err
+		if errors.Is(err, freecache.ErrNotFound) {
+			// Create new series
+			timeSeries := TimeSeriesData{
+				DataPoints: make([][2]any, 0),
+			}
+
+			// Serialize
+			serializedData, err := timeSeries.Serialize()
+			if err != nil {
+				return make([][2]any, 0), err
+			}
+
+			// Set to cache
+			return make([][2]any, 0), C.Set([]byte(key), serializedData, 0)
+		} else {
+			return make([][2]any, 0), err
+		}
 	}
 
 	// DeserializeAcc

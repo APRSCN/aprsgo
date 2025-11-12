@@ -48,6 +48,8 @@ func Status(c fiber.Ctx) error {
 	uplinkLast := ""
 	var packetRX uint64 = 0
 	var packetRXSpeed uint64 = 0
+	var packetTX uint64 = 0
+	var packetTXSpeed uint64 = 0
 	for {
 		// Get time of last packet
 		uplinkLastByte, err := historydb.C.Get([]byte("uplink.last"))
@@ -69,6 +71,20 @@ func Status(c fiber.Ctx) error {
 			continue
 		}
 		packetRXSpeed = uint64(len(rxRecent))
+
+		// Get tx count
+		value, err = historydb.GetValue("uplink.packet.tx.count")
+		if err != nil {
+			continue
+		}
+		packetTX = uint64(value)
+
+		// Get rx speed
+		txRecent, err := historydb.GetDataSlice("uplink.packet.tx.speed")
+		if err != nil {
+			continue
+		}
+		packetTXSpeed = uint64(len(txRecent))
 
 		break
 	}
@@ -133,8 +149,8 @@ func Status(c fiber.Ctx) error {
 			Last:          uplinkLast,
 			PacketRX:      packetRX,
 			PacketRXSpeed: packetRXSpeed,
-			PacketTX:      0,
-			PacketTXSpeed: 0,
+			PacketTX:      packetTX,
+			PacketTXSpeed: packetTXSpeed,
 			BytesRX:       uplink.Client.GetStats().TotalRecvBytes,
 			BytesRXSpeed:  uplink.Client.GetStats().CurrentRecvRate,
 			BytesTX:       uplink.Client.GetStats().TotalSentBytes,
