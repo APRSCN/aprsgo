@@ -103,7 +103,7 @@ func RunHTTPServer() {
 			visit = "localhost"
 		}
 
-		logger.L.Info(fmt.Sprintf("Server is running on %s:%d", host, config.C.GetInt("server.status.port")))
-		logger.L.Debug(fmt.Sprintf("Visit by http://%s:%d", visit, config.C.GetInt("server.status.port")))
+		logger.L.Info(fmt.Sprintf("HTTP Server is running on %s:%d", host, config.C.GetInt("server.status.port")))
+		logger.L.Debug(fmt.Sprintf("Visit status by http://%s:%d", visit, config.C.GetInt("server.status.port")))
 	}
 }

@@ -74,7 +74,7 @@ func Status(c fiber.Ctx) error {
 	}
 
 	// Get listeners
-	// TODO: ReturnStatus status here
+	// TODO: Return status here
 	listeners := make([]model.ReturnListener, 0)
 	for _, l := range listener.Listeners {
 		if l.Visible == "hidden" {
@@ -86,6 +86,21 @@ func Status(c fiber.Ctx) error {
 			Protocol: l.Protocol,
 			Host:     l.Host,
 			Port:     l.Port,
+		})
+	}
+
+	// Get clients
+	// TODO: Return status here
+	clients := make([]model.ReturnClient, 0)
+	for _, v := range listener.Clients {
+		clients = append(clients, model.ReturnClient{
+			At:       v.At,
+			ID:       v.ID,
+			Addr:     v.Addr,
+			Uptime:   v.Uptime,
+			Last:     v.Last,
+			Software: v.Software,
+			Version:  v.Version,
 		})
 	}
 
@@ -125,5 +140,6 @@ func Status(c fiber.Ctx) error {
 			BytesTXSpeed:  uplink.Client.GetStats().CurrentSentRate,
 		},
 		Listeners: listeners,
+		Clients:   clients,
 	})
 }

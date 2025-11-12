@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/APRSCN/aprsgo/internal/client"
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/cron"
 	"github.com/APRSCN/aprsgo/internal/handler"
@@ -32,9 +31,6 @@ func main() {
 
 	// Init uplink
 	uplink.InitUplink()
-
-	// Init client
-	client.InitClient()
 
 	// Init listener
 	listener.InitListener()

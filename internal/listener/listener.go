@@ -1,9 +1,13 @@
 package listener
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/APRSCN/aprsgo/internal/model"
+	"github.com/APRSCN/aprsutils/client"
 	"github.com/ghinknet/json"
 	"go.uber.org/zap"
 )
@@ -19,6 +23,19 @@ type Listener struct {
 }
 
 var Listeners = make([]Listener, 0)
+
+type Client struct {
+	At       string    `json:"at"`
+	ID       string    `json:"id"`
+	Addr     string    `json:"addr"`
+	Uptime   time.Time `json:"uptime"`
+	Last     time.Time `json:"last"`
+	Software string    `json:"software"`
+	Version  string    `json:"version"`
+	c        *TCPAPRSClient
+}
+
+var Clients = make(map[any]*Client)
 
 // InitListener inits listener daemon
 func InitListener() {
@@ -51,6 +68,10 @@ func load() {
 	}
 
 	for _, listener := range listenersConfig {
+		// TODO: Support more protocol
+		if listener.Protocol != "tcp" {
+			continue
+		}
 		Listeners = append(Listeners, Listener{
 			Name:     listener.Name,
 			Type:     listener.Mode,
@@ -60,5 +81,15 @@ func load() {
 			Visible:  listener.Visible,
 			Filter:   listener.Filter,
 		})
+		go func() {
+			// Create APRS server
+			server := NewTCPAPRSServer(client.Mode(listener.Mode))
+
+			// Start server
+			err = server.Start(fmt.Sprintf("%s:%d", listener.Host, listener.Port))
+			if err != nil {
+				logger.L.Error("Error starting server", zap.Error(err))
+			}
+		}()
 	}
 }

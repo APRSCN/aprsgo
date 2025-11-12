@@ -52,10 +52,22 @@ type ReturnListener struct {
 	Port     int    `json:"port"`
 }
 
+// ReturnClient provides a struct to return client info
+type ReturnClient struct {
+	At       string    `json:"at"`
+	ID       string    `json:"id"`
+	Addr     string    `json:"addr"`
+	Uptime   time.Time `json:"uptime"`
+	Last     time.Time `json:"last"`
+	Software string    `json:"software"`
+	Version  string    `json:"version"`
+}
+
 // ReturnStatus provides a struct to return status of server
 type ReturnStatus struct {
 	Msg       string           `json:"msg"`
 	Server    ReturnServer     `json:"server"`
 	Uplink    ReturnUplink     `json:"uplink"`
 	Listeners []ReturnListener `json:"listeners"`
+	Clients   []ReturnClient   `json:"clients"`
 }
