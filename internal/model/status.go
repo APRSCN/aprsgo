@@ -19,20 +19,28 @@ type ReturnServer struct {
 	Uptime   float64   `json:"uptime"`
 	Model    string    `json:"model"`
 	Percent  float64   `json:"percent"`
-	Total    float64   `json:"total"`
-	Used     float64   `json:"used"`
+	Memory   Memory    `json:"memory"`
 }
 
 // ReturnUplink provides a struct to return uplink info
 type ReturnUplink struct {
-	ID       string          `json:"id"`
-	Mode     client.Mode     `json:"mode"`
-	Protocol client.Protocol `json:"protocol"`
-	Host     string          `json:"host"`
-	Port     int             `json:"port"`
-	Server   string          `json:"server"`
-	Up       bool            `json:"up"`
-	Uptime   time.Time       `json:"uptime"`
+	ID            string          `json:"id"`
+	Mode          client.Mode     `json:"mode"`
+	Protocol      client.Protocol `json:"protocol"`
+	Host          string          `json:"host"`
+	Port          int             `json:"port"`
+	Server        string          `json:"server"`
+	Up            bool            `json:"up"`
+	Uptime        time.Time       `json:"uptime"`
+	Last          string          `json:"last"`
+	PacketRX      uint64          `json:"packetRX"`
+	PacketRXSpeed uint64          `json:"packetRXSpeed"`
+	PacketTX      uint64          `json:"packetTX"`
+	PacketTXSpeed uint64          `json:"packetTXSpeed"`
+	BytesRX       uint64          `json:"bytesRX"`
+	BytesRXSpeed  uint64          `json:"bytesRXSpeed"`
+	BytesTX       uint64          `json:"bytesTX"`
+	BytesTXSpeed  uint64          `json:"bytesTXSpeed"`
 }
 
 // ReturnListener provides a struct to return listener info

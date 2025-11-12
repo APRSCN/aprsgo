@@ -1,7 +1,10 @@
 debug: true
 server:
-  # Memory limit in MB
+  # Memory limit in MB for HistoryDB
   memory: 100
+  # Custom processor name
+  # Only available when we can not get CPU info
+  #  model:
   # Your server ID
   id: "N0CALL"
   # Passcode for the server ID

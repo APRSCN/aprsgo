@@ -1,9 +1,11 @@
 package model
 
-import "github.com/APRSCN/aprsgo/internal/historydb"
-
-// ReturnHistory provides a struct to return history of server
-type ReturnHistory struct {
-	Msg    string                `json:"msg"`
-	System []historydb.DataPoint `json:"system"`
+// HistoryReturn provides a struct to return history of server
+type HistoryReturn struct {
+	Msg            string   `json:"msg"`
+	Memory         [][2]any `json:"memory"`
+	UplinkPacketRX [][2]any `json:"uplinkPacketRX"`
+	UplinkPacketTX [][2]any `json:"uplinkPacketTX"`
+	UplinkBytesRX  [][2]any `json:"uplinkBytesRX"`
+	UplinkBytesTX  [][2]any `json:"uplinkBytesTX"`
 }

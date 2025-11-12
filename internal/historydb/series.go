@@ -1,42 +1,45 @@
 package historydb
 
 import (
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"sync"
 	"time"
 
 	"github.com/coocood/freecache"
-	"github.com/ghinknet/json"
 )
 
-// mutex global safe lock
-var mutex sync.Mutex
-
-// DataPoint provides a basic data point struct
-type DataPoint struct {
-	Timestamp time.Time `json:"timestamp"`
-	Value     any       `json:"value"`
-}
+// seriesMutex global safe lock
+var seriesMutex sync.Mutex
 
 // TimeSeriesData provides a slice data struct
 type TimeSeriesData struct {
-	DataPoints []DataPoint
+	DataPoints [][2]any
 }
 
 // Serialize a series data
 func (ts *TimeSeriesData) Serialize() ([]byte, error) {
-	return json.Marshal(ts)
+	var buf bytes.Buffer
+	encoder := gob.NewEncoder(&buf)
+	err := encoder.Encode(ts)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
-// Deserialize a series data
-func Deserialize(data []byte) (TimeSeriesData, error) {
+// DeserializeSeries a series data
+func DeserializeSeries(data []byte) (TimeSeriesData, error) {
 	var ts TimeSeriesData
-	err := json.Unmarshal(data, &ts)
+	buf := bytes.NewBuffer(data)
+	decoder := gob.NewDecoder(buf)
+	err := decoder.Decode(&ts)
 	return ts, err
 }
 
 // RecordDataPoint records a data point
-func RecordDataPoint(key string, newPoint DataPoint) error {
+func RecordDataPoint(key string, newPoint [2]any) error {
 	// Prepare key
 	cacheKey := []byte(key)
 
@@ -46,16 +49,16 @@ func RecordDataPoint(key string, newPoint DataPoint) error {
 		return err
 	}
 
-	// Deserialize
+	// DeserializeAcc
 	var timeSeries TimeSeriesData
 	if err == nil {
-		timeSeries, err = Deserialize(existingData)
+		timeSeries, err = DeserializeSeries(existingData)
 		if err != nil {
 			return err
 		}
 	} else {
 		timeSeries = TimeSeriesData{
-			DataPoints: []DataPoint{},
+			DataPoints: [][2]any{},
 		}
 	}
 
@@ -73,32 +76,32 @@ func RecordDataPoint(key string, newPoint DataPoint) error {
 }
 
 // RecordDataPointSafe records a data point with lock
-func RecordDataPointSafe(key string, newPoint DataPoint) error {
-	mutex.Lock()
-	defer mutex.Unlock()
+func RecordDataPointSafe(key string, newPoint [2]any) error {
+	seriesMutex.Lock()
+	defer seriesMutex.Unlock()
 	return RecordDataPoint(key, newPoint)
 }
 
 // GetDataSlice gets data slice from DB
-func GetDataSlice(key string) ([]DataPoint, error) {
+func GetDataSlice(key string) ([][2]any, error) {
 	// Get data from DB
 	existingData, err := C.Get([]byte(key))
 	if err != nil {
-		return make([]DataPoint, 0), err
+		return make([][2]any, 0), err
 	}
 
-	// Deserialize
+	// DeserializeAcc
 	var timeSeries TimeSeriesData
-	timeSeries, err = Deserialize(existingData)
+	timeSeries, err = DeserializeSeries(existingData)
 	if err != nil {
-		return make([]DataPoint, 0), err
+		return make([][2]any, 0), err
 	}
 
 	return timeSeries.DataPoints, nil
 }
 
 // ClearDataSlice clears expired data from slice
-func ClearDataSlice(key string, TTL time.Duration) error {
+func ClearDataSlice(key string, TTL float64) error {
 	// Get time now
 	now := time.Now()
 
@@ -111,17 +114,17 @@ func ClearDataSlice(key string, TTL time.Duration) error {
 		return err
 	}
 
-	// Deserialize
+	// DeserializeAcc
 	var timeSeries TimeSeriesData
-	timeSeries, err = Deserialize(existingData)
+	timeSeries, err = DeserializeSeries(existingData)
 	if err != nil {
 		return err
 	}
 
 	// Append data
-	newDataPoints := make([]DataPoint, 0)
+	newDataPoints := make([][2]any, 0)
 	for _, dataPoint := range timeSeries.DataPoints {
-		if dataPoint.Timestamp.Add(TTL).After(now) {
+		if dataPoint[0].(float64)+TTL > float64(now.UnixNano())/1e9 {
 			newDataPoints = append(newDataPoints, dataPoint)
 		}
 	}

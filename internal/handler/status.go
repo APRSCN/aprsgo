@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
+	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/listener"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsgo/internal/system"
@@ -39,6 +40,38 @@ func Status(c fiber.Ctx) error {
 		}
 		break
 	}
+	if cpuModel == "" {
+		cpuModel = config.C.GetString("server.model")
+	}
+
+	// Get uplink
+	uplinkLast := ""
+	var packetRX uint64 = 0
+	var packetRXSpeed uint64 = 0
+	for {
+		// Get time of last packet
+		uplinkLastByte, err := historydb.C.Get([]byte("uplink.last"))
+		if err != nil {
+			continue
+		}
+		uplinkLast = string(uplinkLastByte)
+
+		// Get rx count
+		value, err := historydb.GetValue("uplink.packet.rx.count")
+		if err != nil {
+			continue
+		}
+		packetRX = uint64(value)
+
+		// Get rx speed
+		rxRecent, err := historydb.GetDataSlice("uplink.packet.rx.speed")
+		if err != nil {
+			continue
+		}
+		packetRXSpeed = uint64(len(rxRecent))
+
+		break
+	}
 
 	// Get listeners
 	// TODO: ReturnStatus status here
@@ -70,18 +103,26 @@ func Status(c fiber.Ctx) error {
 			Uptime:   timeNow.Sub(config.Uptime).Seconds(),
 			Model:    cpuModel,
 			Percent:  system.Status.Percent,
-			Total:    system.Status.Total,
-			Used:     system.Status.Used,
+			Memory:   system.Status.Memory,
 		},
 		Uplink: model.ReturnUplink{
-			ID:       uplink.Client.Callsign(),
-			Mode:     uplink.Client.Mode(),
-			Protocol: uplink.Client.Protocol(),
-			Host:     uplink.Client.Host(),
-			Port:     uplink.Client.Port(),
-			Server:   uplink.Client.Server(),
-			Up:       uplink.Client.Up(),
-			Uptime:   uplink.Client.Uptime(),
+			ID:            uplink.Client.Callsign(),
+			Mode:          uplink.Client.Mode(),
+			Protocol:      uplink.Client.Protocol(),
+			Host:          uplink.Client.Host(),
+			Port:          uplink.Client.Port(),
+			Server:        uplink.Client.Server(),
+			Up:            uplink.Client.Up(),
+			Uptime:        uplink.Client.Uptime(),
+			Last:          uplinkLast,
+			PacketRX:      packetRX,
+			PacketRXSpeed: packetRXSpeed,
+			PacketTX:      0,
+			PacketTXSpeed: 0,
+			BytesRX:       uplink.Client.GetStats().TotalRecvBytes,
+			BytesRXSpeed:  uplink.Client.GetStats().CurrentRecvRate,
+			BytesTX:       uplink.Client.GetStats().TotalSentBytes,
+			BytesTXSpeed:  uplink.Client.GetStats().CurrentSentRate,
 		},
 		Listeners: listeners,
 	})
