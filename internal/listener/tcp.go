@@ -425,13 +425,24 @@ func (c *TCPAPRSClient) handleUplinkData() {
 				_ = c.Send(data.Data)
 				atomic.AddUint64(&c.stats.SentPackets, 1)
 			case client.IGate:
-				if c.filter != "" {
+				if len(Listeners) > c.server.index && Listeners[c.server.index].Filter != "" {
 					// Parse APRS packet
 					parsed, err := parser.Parse(data.Data)
 					if err == nil {
-						if Filter(c.filter, parsed) {
+						if Filter(Listeners[c.server.index].Filter, parsed) {
 							_ = c.Send(data.Data)
 							atomic.AddUint64(&c.stats.SentPackets, 1)
+						}
+					}
+				} else {
+					if c.filter != "" {
+						// Parse APRS packet
+						parsed, err := parser.Parse(data.Data)
+						if err == nil {
+							if Filter(c.filter, parsed) {
+								_ = c.Send(data.Data)
+								atomic.AddUint64(&c.stats.SentPackets, 1)
+							}
 						}
 					}
 				}
