@@ -3,6 +3,7 @@ package uplink
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/logger"
@@ -14,6 +15,8 @@ import (
 
 var Client *client.Client
 var Stream *DataStream
+var Last time.Time
+var Stats *model.Statistics = new(model.Statistics)
 
 // InitUplink inits uplink daemon
 func InitUplink() {
@@ -24,6 +27,7 @@ func InitUplink() {
 	go selectUplink()
 
 	// Start stats
+	go rate()
 	go stats()
 
 	logger.L.Debug("Uplink daemon initialized")

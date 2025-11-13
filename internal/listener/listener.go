@@ -21,7 +21,7 @@ type Listener struct {
 	Visible  string `json:"visible"`
 	Filter   string `json:"filter"`
 
-	Stats Statistics
+	Stats model.Statistics
 }
 
 var Listeners = make([]Listener, 0)
@@ -38,7 +38,7 @@ type Client struct {
 
 	c *TCPAPRSClient // For closing old connection
 
-	Stats Statistics
+	Stats model.Statistics
 }
 
 var Clients = make(map[any]*Client)
@@ -86,7 +86,7 @@ func load() {
 			Port:     listener.Port,
 			Visible:  listener.Visible,
 			Filter:   listener.Filter,
-			Stats:    Statistics{},
+			Stats:    model.Statistics{},
 		})
 
 		// Create APRS server

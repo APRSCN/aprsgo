@@ -32,7 +32,7 @@ type ReturnUplink struct {
 	Server       string          `json:"server"`
 	Up           bool            `json:"up"`
 	Uptime       time.Time       `json:"uptime"`
-	Last         string          `json:"last"`
+	Last         time.Time       `json:"last"`
 	PacketRX     uint64          `json:"packetRX"`
 	PacketRXRate uint64          `json:"packetRXRate"`
 	PacketTX     uint64          `json:"packetTX"`

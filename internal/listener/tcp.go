@@ -14,6 +14,7 @@ import (
 
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/logger"
+	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsgo/internal/uplink"
 	"github.com/APRSCN/aprsutils"
 	"github.com/APRSCN/aprsutils/client"
@@ -36,7 +37,7 @@ type TCPAPRSClient struct {
 	filter      string
 	server      *TCPAPRSServer
 
-	stats *Statistics // Client statistics
+	stats *model.Statistics // Client statistics
 }
 
 // TCPAPRSServer provides a struct for APRS server
@@ -49,12 +50,12 @@ type TCPAPRSServer struct {
 	mode     client.Mode
 	index    int
 
-	stats *Statistics // Server statistics
+	stats *model.Statistics // Server statistics
 }
 
 // Global statistics for all servers
 var (
-	globalStats Statistics
+	globalStats model.Statistics
 	statsMutex  sync.RWMutex
 )
 
@@ -69,15 +70,15 @@ func updateAllRates() {
 	currentSentBytes := atomic.LoadUint64(&globalStats.SentBytes)
 	currentReceivedBytes := atomic.LoadUint64(&globalStats.ReceivedBytes)
 
-	globalStats.SendPacketRate = currentSentPackets - globalStats.lastSentPackets
-	globalStats.RecvPacketRate = currentReceivedPackets - globalStats.lastReceivedPackets
-	globalStats.SendByteRate = currentSentBytes - globalStats.lastSentBytes
-	globalStats.RecvByteRate = currentReceivedBytes - globalStats.lastReceivedBytes
+	globalStats.SendPacketRate = currentSentPackets - globalStats.LastSentPackets
+	globalStats.RecvPacketRate = currentReceivedPackets - globalStats.LastReceivedPackets
+	globalStats.SendByteRate = currentSentBytes - globalStats.LastSentBytes
+	globalStats.RecvByteRate = currentReceivedBytes - globalStats.LastReceivedBytes
 
-	globalStats.lastSentPackets = currentSentPackets
-	globalStats.lastReceivedPackets = currentReceivedPackets
-	globalStats.lastSentBytes = currentSentBytes
-	globalStats.lastReceivedBytes = currentReceivedBytes
+	globalStats.LastSentPackets = currentSentPackets
+	globalStats.LastReceivedPackets = currentReceivedPackets
+	globalStats.LastSentBytes = currentSentBytes
+	globalStats.LastReceivedBytes = currentReceivedBytes
 }
 
 // NewTCPAPRSServer creates a new APRS server
@@ -87,7 +88,7 @@ func NewTCPAPRSServer(mode client.Mode, index int) *TCPAPRSServer {
 		stopChan: make(chan struct{}),
 		mode:     mode,
 		index:    index,
-		stats:    new(Statistics),
+		stats:    new(model.Statistics),
 	}
 }
 
@@ -139,15 +140,15 @@ func (s *TCPAPRSServer) updateStats() {
 			currentSentBytes := s.stats.SentBytes
 			currentReceivedBytes := s.stats.ReceivedBytes
 
-			s.stats.SendPacketRate = currentSentPackets - s.stats.lastSentPackets
-			s.stats.RecvPacketRate = currentReceivedPackets - s.stats.lastReceivedPackets
-			s.stats.SendByteRate = currentSentBytes - s.stats.lastSentBytes
-			s.stats.RecvByteRate = currentReceivedBytes - s.stats.lastReceivedBytes
+			s.stats.SendPacketRate = currentSentPackets - s.stats.LastSentPackets
+			s.stats.RecvPacketRate = currentReceivedPackets - s.stats.LastReceivedPackets
+			s.stats.SendByteRate = currentSentBytes - s.stats.LastSentBytes
+			s.stats.RecvByteRate = currentReceivedBytes - s.stats.LastReceivedBytes
 
-			s.stats.lastSentPackets = currentSentPackets
-			s.stats.lastReceivedPackets = currentReceivedPackets
-			s.stats.lastSentBytes = currentSentBytes
-			s.stats.lastReceivedBytes = currentReceivedBytes
+			s.stats.LastSentPackets = currentSentPackets
+			s.stats.LastReceivedPackets = currentReceivedPackets
+			s.stats.LastSentBytes = currentSentBytes
+			s.stats.LastReceivedBytes = currentReceivedBytes
 
 			Listeners[s.index].Stats = *s.stats
 
@@ -173,15 +174,15 @@ func (s *TCPAPRSServer) updateClientRates() {
 		currentSentBytes := c.stats.SentBytes
 		currentReceivedBytes := c.stats.ReceivedBytes
 
-		c.stats.SendPacketRate = currentSentPackets - c.stats.lastSentPackets
-		c.stats.RecvPacketRate = currentReceivedPackets - c.stats.lastReceivedPackets
-		c.stats.SendByteRate = currentSentBytes - c.stats.lastSentBytes
-		c.stats.RecvByteRate = currentReceivedBytes - c.stats.lastReceivedBytes
+		c.stats.SendPacketRate = currentSentPackets - c.stats.LastSentPackets
+		c.stats.RecvPacketRate = currentReceivedPackets - c.stats.LastReceivedPackets
+		c.stats.SendByteRate = currentSentBytes - c.stats.LastSentBytes
+		c.stats.RecvByteRate = currentReceivedBytes - c.stats.LastReceivedBytes
 
-		c.stats.lastSentPackets = currentSentPackets
-		c.stats.lastReceivedPackets = currentReceivedPackets
-		c.stats.lastSentBytes = currentSentBytes
-		c.stats.lastReceivedBytes = currentReceivedBytes
+		c.stats.LastSentPackets = currentSentPackets
+		c.stats.LastReceivedPackets = currentReceivedPackets
+		c.stats.LastSentBytes = currentSentBytes
+		c.stats.LastReceivedBytes = currentReceivedBytes
 
 		Clients[c].Stats = *c.stats
 
@@ -210,7 +211,7 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		conn:       conn,
 		lastActive: time.Now(),
 		mode:       s.mode,
-		stats:      new(Statistics),
+		stats:      new(model.Statistics),
 		server:     s,
 	}
 

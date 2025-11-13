@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
-	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/listener"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsgo/internal/system"
@@ -42,51 +41,6 @@ func Status(c fiber.Ctx) error {
 	}
 	if cpuModel == "" {
 		cpuModel = config.C.GetString("server.model")
-	}
-
-	// Get uplink
-	uplinkLast := ""
-	var packetRX uint64 = 0
-	var packetRXRate uint64 = 0
-	var packetTX uint64 = 0
-	var packetTXRate uint64 = 0
-	for {
-		// Get time of last packet
-		uplinkLastByte, err := historydb.C.Get([]byte("uplink.last"))
-		if err != nil {
-			continue
-		}
-		uplinkLast = string(uplinkLastByte)
-
-		// Get rx count
-		value, err := historydb.GetValue("uplink.packet.rx.count")
-		if err != nil {
-			continue
-		}
-		packetRX = uint64(value)
-
-		// Get rx rate
-		rxRecent, err := historydb.GetDataSlice("uplink.packet.rx.rate")
-		if err != nil {
-			continue
-		}
-		packetRXRate = uint64(len(rxRecent))
-
-		// Get tx count
-		value, err = historydb.GetValue("uplink.packet.tx.count")
-		if err != nil {
-			continue
-		}
-		packetTX = uint64(value)
-
-		// Get rx rate
-		txRecent, err := historydb.GetDataSlice("uplink.packet.tx.rate")
-		if err != nil {
-			continue
-		}
-		packetTXRate = uint64(len(txRecent))
-
-		break
 	}
 
 	// Get listeners
@@ -160,11 +114,11 @@ func Status(c fiber.Ctx) error {
 			Server:       uplink.Client.Server(),
 			Up:           uplink.Client.Up(),
 			Uptime:       uplink.Client.Uptime(),
-			Last:         uplinkLast,
-			PacketRX:     packetRX,
-			PacketRXRate: packetRXRate,
-			PacketTX:     packetTX,
-			PacketTXRate: packetTXRate,
+			Last:         uplink.Last,
+			PacketRX:     uplink.Stats.ReceivedPackets,
+			PacketRXRate: uplink.Stats.RecvPacketRate,
+			PacketTX:     uplink.Stats.SentPackets,
+			PacketTXRate: uplink.Stats.SendPacketRate,
 			BytesRX:      uplink.Client.GetStats().TotalRecvBytes,
 			BytesRXRate:  uplink.Client.GetStats().CurrentRecvRate,
 			BytesTX:      uplink.Client.GetStats().TotalSentBytes,
