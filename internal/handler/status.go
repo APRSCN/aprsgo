@@ -79,6 +79,7 @@ func Status(c fiber.Ctx) error {
 			Protocol:     l.Protocol,
 			Host:         l.Host,
 			Port:         l.Port,
+			Filter:       l.Filter,
 			OnlineClient: l.OnlineClient,
 			PeakClient:   l.PeakClient,
 			PacketRX:     l.Stats.ReceivedPackets,

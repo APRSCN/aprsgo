@@ -50,6 +50,7 @@ type ReturnListener struct {
 	Protocol     string `json:"protocol"`
 	Host         string `json:"host"`
 	Port         int    `json:"port"`
+	Filter       string `json:"filter"`
 	OnlineClient int    `json:"onlineClient"`
 	PeakClient   int    `json:"peakClient"`
 	PacketRX     uint64 `json:"packetRX"`
