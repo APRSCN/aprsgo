@@ -16,12 +16,18 @@ import (
 var Client *client.Client
 var Stream *DataStream
 var Last time.Time
-var Stats *model.Statistics = new(model.Statistics)
+var Stats = new(model.Statistics)
+var stop = false
 
 // InitUplink inits uplink daemon
 func InitUplink() {
 	// Init Stream
 	Stream = NewDataStream(100)
+
+	// Add config change trigger
+	config.OnChange = append(config.OnChange, func() {
+		reload()
+	})
 
 	// Start uplink
 	go selectUplink()
@@ -35,6 +41,9 @@ func InitUplink() {
 
 // selectUplink is the daemon of uplink that will automatically choose an available uplink
 func selectUplink() {
+	// Reset flag
+	stop = false
+
 	// Load config
 	var uplinksConfig []model.UplinkConfig
 	marshalled, err := json.Marshal(config.C.Get("server.uplinks"))
@@ -49,7 +58,7 @@ func selectUplink() {
 
 	defer Client.Close()
 	// Select available node with fallthrough
-	for {
+	for !stop {
 		for _, uplink := range uplinksConfig {
 			// Create client
 			Client = client.NewClient(
@@ -74,7 +83,18 @@ func selectUplink() {
 
 			// Waiting
 			Client.Wait()
+			Client = nil
 			closeFn()
 		}
 	}
+}
+
+// reload the uplink
+func reload() {
+	// Stop
+	stop = true
+	Client.Close()
+
+	// Restart uplink
+	go selectUplink()
 }

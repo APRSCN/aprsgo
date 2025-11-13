@@ -43,6 +43,30 @@ func Status(c fiber.Ctx) error {
 		cpuModel = config.C.GetString("server.model")
 	}
 
+	// Get uplink
+	var up *model.ReturnUplink = nil
+	if uplink.Client != nil {
+		up = &model.ReturnUplink{
+			ID:           uplink.Client.Callsign(),
+			Mode:         uplink.Client.Mode(),
+			Protocol:     uplink.Client.Protocol(),
+			Host:         uplink.Client.Host(),
+			Port:         uplink.Client.Port(),
+			Server:       uplink.Client.Server(),
+			Up:           uplink.Client.Up(),
+			Uptime:       uplink.Client.Uptime(),
+			Last:         uplink.Last,
+			PacketRX:     uplink.Stats.ReceivedPackets,
+			PacketRXRate: uplink.Stats.RecvPacketRate,
+			PacketTX:     uplink.Stats.SentPackets,
+			PacketTXRate: uplink.Stats.SendPacketRate,
+			BytesRX:      uplink.Client.GetStats().TotalRecvBytes,
+			BytesRXRate:  uplink.Client.GetStats().CurrentRecvRate,
+			BytesTX:      uplink.Client.GetStats().TotalSentBytes,
+			BytesTXRate:  uplink.Client.GetStats().CurrentSentRate,
+		}
+	}
+
 	// Get listeners
 	listeners := make([]model.ReturnListener, 0)
 	for _, l := range listener.Listeners {
@@ -108,25 +132,7 @@ func Status(c fiber.Ctx) error {
 			Percent:  system.Status.Percent,
 			Memory:   system.Status.Memory,
 		},
-		Uplink: model.ReturnUplink{
-			ID:           uplink.Client.Callsign(),
-			Mode:         uplink.Client.Mode(),
-			Protocol:     uplink.Client.Protocol(),
-			Host:         uplink.Client.Host(),
-			Port:         uplink.Client.Port(),
-			Server:       uplink.Client.Server(),
-			Up:           uplink.Client.Up(),
-			Uptime:       uplink.Client.Uptime(),
-			Last:         uplink.Last,
-			PacketRX:     uplink.Stats.ReceivedPackets,
-			PacketRXRate: uplink.Stats.RecvPacketRate,
-			PacketTX:     uplink.Stats.SentPackets,
-			PacketTXRate: uplink.Stats.SendPacketRate,
-			BytesRX:      uplink.Client.GetStats().TotalRecvBytes,
-			BytesRXRate:  uplink.Client.GetStats().CurrentRecvRate,
-			BytesTX:      uplink.Client.GetStats().TotalSentBytes,
-			BytesTXRate:  uplink.Client.GetStats().CurrentSentRate,
-		},
+		Uplink:    up,
 		Listeners: listeners,
 		Clients:   clients,
 	})

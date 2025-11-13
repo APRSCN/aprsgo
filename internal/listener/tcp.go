@@ -251,7 +251,9 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		s.mu.Lock()
 		delete(s.clients, c)
 		delete(Clients, c)
-		Listeners[s.index].OnlineClient = len(s.clients)
+		if len(Listeners) > s.index {
+			Listeners[s.index].OnlineClient = len(s.clients)
+		}
 		s.mu.Unlock()
 		c.Close()
 	}()
