@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Listener provides a struct to record listener
 type Listener struct {
 	Name     string `json:"name"`
 	Type     string `json:"type"`
@@ -21,11 +22,15 @@ type Listener struct {
 	Visible  string `json:"visible"`
 	Filter   string `json:"filter"`
 
+	s *TCPAPRSServer // For closing
+
 	Stats model.Statistics
 }
 
-var Listeners = make([]Listener, 0)
+// Listeners records all listeners
+var Listeners = make(map[any]Listener)
 
+// Client provides a struct to record client
 type Client struct {
 	At       string    `json:"at"`
 	ID       string    `json:"id"`
@@ -36,11 +41,12 @@ type Client struct {
 	Version  string    `json:"version"`
 	Filter   string    `json:"filter"`
 
-	c *TCPAPRSClient // For closing old connection
+	c *TCPAPRSClient // For closing
 
 	Stats model.Statistics
 }
 
+// Clients records all clients
 var Clients = make(map[any]*Client)
 
 // InitListener inits listener daemon
@@ -58,8 +64,13 @@ func InitListener() {
 
 // load listener from config
 func load() {
+	// Close servers
+	for _, v := range Listeners {
+		v.s.Stop()
+	}
+
 	// Remove listeners
-	Listeners = make([]Listener, 0)
+	Listeners = make(map[any]Listener)
 
 	// Load config
 	var listenersConfig []model.ListenerConfig
@@ -78,7 +89,12 @@ func load() {
 		if listener.Protocol != "tcp" {
 			continue
 		}
-		Listeners = append(Listeners, Listener{
+
+		// Create APRS server
+		server := NewTCPAPRSServer(client.Mode(listener.Mode))
+
+		// Record listener
+		Listeners[server] = Listener{
 			Name:     listener.Name,
 			Type:     listener.Mode,
 			Protocol: listener.Protocol,
@@ -86,17 +102,14 @@ func load() {
 			Port:     listener.Port,
 			Visible:  listener.Visible,
 			Filter:   listener.Filter,
+			s:        server,
 			Stats:    model.Statistics{},
-		})
+		}
 
-		// Create APRS server
-		server := NewTCPAPRSServer(client.Mode(listener.Mode), len(Listeners)-1)
-		go func(server *TCPAPRSServer) {
-			// Start server
-			err = server.Start(fmt.Sprintf("%s:%d", listener.Host, listener.Port))
-			if err != nil {
-				logger.L.Error("Error starting server", zap.Error(err))
-			}
-		}(server)
+		// Start server
+		err = server.Start(fmt.Sprintf("%s:%d", listener.Host, listener.Port))
+		if err != nil {
+			logger.L.Error("Error starting server", zap.Error(err))
+		}
 	}
 }

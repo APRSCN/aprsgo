@@ -82,12 +82,11 @@ func updateAllRates() {
 }
 
 // NewTCPAPRSServer creates a new APRS server
-func NewTCPAPRSServer(mode client.Mode, index int) *TCPAPRSServer {
+func NewTCPAPRSServer(mode client.Mode) *TCPAPRSServer {
 	return &TCPAPRSServer{
 		clients:  make(map[*TCPAPRSClient]bool),
 		stopChan: make(chan struct{}),
 		mode:     mode,
-		index:    index,
 		stats:    new(model.Statistics),
 	}
 }
@@ -108,13 +107,21 @@ func (s *TCPAPRSServer) Start(addr string) error {
 	// Connection clean goroutine
 	go s.cleanupInactiveClients()
 
+	// Main server goroutine
+	go s.handleServer()
+
+	return nil
+}
+
+// handleServer handles the main server
+func (s *TCPAPRSServer) handleServer() {
 	// Accept connection
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
 			select {
 			case <-s.stopChan:
-				return nil
+				return
 			default:
 				logger.L.Error("Error accepting incoming client connection", zap.Error(err))
 				continue
@@ -150,7 +157,9 @@ func (s *TCPAPRSServer) updateStats() {
 			s.stats.LastSentBytes = currentSentBytes
 			s.stats.LastReceivedBytes = currentReceivedBytes
 
-			Listeners[s.index].Stats = *s.stats
+			listener := Listeners[s]
+			listener.Stats = *s.stats
+			Listeners[s] = listener
 
 			s.mu.Unlock()
 
@@ -275,6 +284,12 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		c.lastActive = time.Now()
 		Clients[c].Last = c.lastActive
 
+		// Update statistics for received data
+		packetSize := uint64(len(line))
+		atomic.AddUint64(&c.stats.ReceivedBytes, packetSize)
+		atomic.AddUint64(&s.stats.ReceivedBytes, packetSize)
+		atomic.AddUint64(&globalStats.ReceivedBytes, packetSize)
+
 		// Process received data
 		s.processPacket(c, line)
 	}
@@ -291,13 +306,9 @@ func (s *TCPAPRSServer) processPacket(c *TCPAPRSClient, packet string) {
 		s.handleAPRSData(c, packet)
 
 		// Update statistics for received data
-		packetSize := uint64(len(packet))
 		atomic.AddUint64(&c.stats.ReceivedPackets, 1)
-		atomic.AddUint64(&c.stats.ReceivedBytes, packetSize)
 		atomic.AddUint64(&s.stats.ReceivedPackets, 1)
-		atomic.AddUint64(&s.stats.ReceivedBytes, packetSize)
 		atomic.AddUint64(&globalStats.ReceivedPackets, 1)
-		atomic.AddUint64(&globalStats.ReceivedBytes, packetSize)
 	} else {
 		_ = c.Send("# invalid packet")
 	}
