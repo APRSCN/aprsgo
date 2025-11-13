@@ -387,31 +387,29 @@ func (s *TCPAPRSServer) handleComment(client *TCPAPRSClient) {
 }
 
 // handleAPRSData handles APRS packet
-func (s *TCPAPRSServer) handleAPRSData(client *TCPAPRSClient, packet string) {
-	client.mu.Lock()
-	defer client.mu.Unlock()
+func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	if !client.verified {
-		_ = client.Send("# invalid login")
+	if !c.verified {
+		_ = c.Send("# invalid login")
 		return
 	}
 
-	uplink.Stream.Write(packet, client)
+	uplink.Stream.Write(packet, Clients[c].ID)
 }
 
 // handleUplinkData sends data to client
 func (c *TCPAPRSClient) handleUplinkData() {
 	for data := range c.dataCh {
 		c.mu.Lock()
-		if c.loggedIn && c.conn != nil {
+		if c.loggedIn && c.conn != nil && data.Writer != Clients[c].ID {
 			switch c.mode {
 			case client.Fullfeed:
 				_ = c.Send(data.Data)
 			case client.IGate:
 				if c.filter != "" {
-					if data.Writer != c {
-						_ = c.Send(data.Data)
-					}
+					_ = c.Send(data.Data)
 				}
 			}
 		}
