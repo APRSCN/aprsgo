@@ -359,7 +359,7 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 				}
 				client.filter += fmt.Sprintf("%s ", parts[k+i])
 			}
-			client.filter = strings.TrimPrefix(client.filter, " ")
+			client.filter = strings.TrimSuffix(client.filter, " ")
 		}
 	}
 	// Record client
