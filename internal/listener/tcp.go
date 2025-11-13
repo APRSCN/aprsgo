@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -18,8 +19,13 @@ import (
 	"github.com/APRSCN/aprsgo/internal/uplink"
 	"github.com/APRSCN/aprsutils"
 	"github.com/APRSCN/aprsutils/client"
+	"github.com/APRSCN/aprsutils/parser"
 	"go.uber.org/zap"
 )
+
+var serverCommands = []string{
+	"filter",
+}
 
 // TCPAPRSClient provides a struct for APRS client connection
 type TCPAPRSClient struct {
@@ -320,6 +326,7 @@ func (s *TCPAPRSServer) processPacket(c *TCPAPRSClient, packet string) {
 
 // handleLogin handles login command
 func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
+	// Parse
 	parts := strings.Fields(packet)
 	if len(parts) < 4 {
 		_ = client.Send("# invalid login")
@@ -343,7 +350,14 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 			client.version = parts[k+2]
 		// Server commands
 		case "filter":
-			client.filter = parts[k+1]
+			client.filter = ""
+			for i := 1; i < len(parts)-k; i++ {
+				if slices.Contains(serverCommands, parts[k+i]) {
+					break
+				}
+				client.filter += fmt.Sprintf("%s ", parts[k+i])
+			}
+			client.filter = strings.TrimPrefix(client.filter, " ")
 		}
 	}
 	// Record client
@@ -407,9 +421,17 @@ func (c *TCPAPRSClient) handleUplinkData() {
 			switch c.mode {
 			case client.Fullfeed:
 				_ = c.Send(data.Data)
+				atomic.AddUint64(&c.stats.SentPackets, 1)
 			case client.IGate:
 				if c.filter != "" {
-					_ = c.Send(data.Data)
+					// Parse APRS packet
+					parsed, err := parser.Parse(data.Data)
+					if err == nil {
+						if Filter(c.filter, parsed) {
+							_ = c.Send(data.Data)
+							atomic.AddUint64(&c.stats.SentPackets, 1)
+						}
+					}
 				}
 			}
 		}
@@ -428,7 +450,6 @@ func (c *TCPAPRSClient) Send(data string) error {
 	if err == nil {
 		// Update send statistics
 		packetSize := uint64(len(data))
-		atomic.AddUint64(&c.stats.SentPackets, 1)
 		atomic.AddUint64(&c.stats.SentBytes, packetSize)
 		c.server.UpdateServerSendStats(1, packetSize)
 	}
