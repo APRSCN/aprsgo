@@ -7,7 +7,7 @@ import (
 // StreamData is the basic struct for stream write
 type StreamData struct {
 	Data   string
-	Writer any
+	Writer string
 }
 
 // DataStream provides a basic struct to build data Stream
@@ -26,7 +26,7 @@ func NewDataStream(bufferSize int) *DataStream {
 }
 
 // Write data to Stream
-func (ds *DataStream) Write(data string, writer any) {
+func (ds *DataStream) Write(data string, writer string) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 

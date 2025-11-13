@@ -417,7 +417,7 @@ func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
 func (c *TCPAPRSClient) handleUplinkData() {
 	for data := range c.dataCh {
 		c.mu.Lock()
-		if c.loggedIn && c.conn != nil && data.Writer != Clients[c].ID {
+		if c.loggedIn && c.conn != nil && Clients[c] != nil && data.Writer != Clients[c].ID {
 			switch c.mode {
 			case client.Fullfeed:
 				_ = c.Send(data.Data)
