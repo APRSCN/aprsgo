@@ -20,6 +20,8 @@ type Listener struct {
 	Port     int    `json:"port"`
 	Visible  string `json:"visible"`
 	Filter   string `json:"filter"`
+
+	Stats Statistics
 }
 
 var Listeners = make([]Listener, 0)
@@ -33,7 +35,10 @@ type Client struct {
 	Software string    `json:"software"`
 	Version  string    `json:"version"`
 	Filter   string    `json:"filter"`
-	c        *TCPAPRSClient
+
+	c *TCPAPRSClient // For closing old connection
+
+	Stats Statistics
 }
 
 var Clients = make(map[any]*Client)
@@ -81,16 +86,17 @@ func load() {
 			Port:     listener.Port,
 			Visible:  listener.Visible,
 			Filter:   listener.Filter,
+			Stats:    Statistics{},
 		})
-		go func() {
-			// Create APRS server
-			server := NewTCPAPRSServer(client.Mode(listener.Mode))
 
+		// Create APRS server
+		server := NewTCPAPRSServer(client.Mode(listener.Mode), len(Listeners)-1)
+		go func(server *TCPAPRSServer) {
 			// Start server
 			err = server.Start(fmt.Sprintf("%s:%d", listener.Host, listener.Port))
 			if err != nil {
 				logger.L.Error("Error starting server", zap.Error(err))
 			}
-		}()
+		}(server)
 	}
 }

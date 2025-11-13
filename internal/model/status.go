@@ -24,44 +24,60 @@ type ReturnServer struct {
 
 // ReturnUplink provides a struct to return uplink info
 type ReturnUplink struct {
-	ID            string          `json:"id"`
-	Mode          client.Mode     `json:"mode"`
-	Protocol      client.Protocol `json:"protocol"`
-	Host          string          `json:"host"`
-	Port          int             `json:"port"`
-	Server        string          `json:"server"`
-	Up            bool            `json:"up"`
-	Uptime        time.Time       `json:"uptime"`
-	Last          string          `json:"last"`
-	PacketRX      uint64          `json:"packetRX"`
-	PacketRXSpeed uint64          `json:"packetRXSpeed"`
-	PacketTX      uint64          `json:"packetTX"`
-	PacketTXSpeed uint64          `json:"packetTXSpeed"`
-	BytesRX       uint64          `json:"bytesRX"`
-	BytesRXSpeed  uint64          `json:"bytesRXSpeed"`
-	BytesTX       uint64          `json:"bytesTX"`
-	BytesTXSpeed  uint64          `json:"bytesTXSpeed"`
+	ID           string          `json:"id"`
+	Mode         client.Mode     `json:"mode"`
+	Protocol     client.Protocol `json:"protocol"`
+	Host         string          `json:"host"`
+	Port         int             `json:"port"`
+	Server       string          `json:"server"`
+	Up           bool            `json:"up"`
+	Uptime       time.Time       `json:"uptime"`
+	Last         string          `json:"last"`
+	PacketRX     uint64          `json:"packetRX"`
+	PacketRXRate uint64          `json:"packetRXRate"`
+	PacketTX     uint64          `json:"packetTX"`
+	PacketTXRate uint64          `json:"packetTXRate"`
+	BytesRX      uint64          `json:"bytesRX"`
+	BytesRXRate  uint64          `json:"bytesRXRate"`
+	BytesTX      uint64          `json:"bytesTX"`
+	BytesTXRate  uint64          `json:"bytesTXRate"`
 }
 
 // ReturnListener provides a struct to return listener info
 type ReturnListener struct {
-	Name     string `json:"name"`
-	Mode     string `json:"mode"`
-	Protocol string `json:"protocol"`
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
+	Name         string `json:"name"`
+	Mode         string `json:"mode"`
+	Protocol     string `json:"protocol"`
+	Host         string `json:"host"`
+	Port         int    `json:"port"`
+	PacketRX     uint64 `json:"packetRX"`
+	PacketRXRate uint64 `json:"packetRXRate"`
+	PacketTX     uint64 `json:"packetTX"`
+	PacketTXRate uint64 `json:"packetTXRate"`
+	BytesRX      uint64 `json:"bytesRX"`
+	BytesRXRate  uint64 `json:"bytesRXRate"`
+	BytesTX      uint64 `json:"bytesTX"`
+	BytesTXRate  uint64 `json:"bytesTXRate"`
 }
 
 // ReturnClient provides a struct to return client info
 type ReturnClient struct {
-	At       string    `json:"at"`
-	ID       string    `json:"id"`
-	Addr     string    `json:"addr"`
-	Uptime   time.Time `json:"uptime"`
-	Last     time.Time `json:"last"`
-	Software string    `json:"software"`
-	Version  string    `json:"version"`
-	Filter   string    `json:"filter"`
+	At           string    `json:"at"`
+	ID           string    `json:"id"`
+	Addr         string    `json:"addr"`
+	Uptime       time.Time `json:"uptime"`
+	Last         time.Time `json:"last"`
+	Software     string    `json:"software"`
+	Version      string    `json:"version"`
+	Filter       string    `json:"filter"`
+	PacketRX     uint64    `json:"packetRX"`
+	PacketRXRate uint64    `json:"packetRXRate"`
+	PacketTX     uint64    `json:"packetTX"`
+	PacketTXRate uint64    `json:"packetTXRate"`
+	BytesRX      uint64    `json:"bytesRX"`
+	BytesRXRate  uint64    `json:"bytesRXRate"`
+	BytesTX      uint64    `json:"bytesTX"`
+	BytesTXRate  uint64    `json:"bytesTXRate"`
 }
 
 // ReturnStatus provides a struct to return status of server

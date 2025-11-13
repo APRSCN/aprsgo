@@ -21,8 +21,8 @@ func InitCron() {
 
 // registerDefault registers default cron tasks
 func registerDefault() {
-	_, err := C.AddFunc("@every 1s", ClearSpeed)
+	_, err := C.AddFunc("@every 1s", ClearRate)
 	if err != nil {
-		logger.L.Fatal("Failed to register ClearSpeed cron", zap.Error(err))
+		logger.L.Fatal("Failed to register ClearRate cron", zap.Error(err))
 	}
 }

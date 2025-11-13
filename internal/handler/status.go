@@ -47,9 +47,9 @@ func Status(c fiber.Ctx) error {
 	// Get uplink
 	uplinkLast := ""
 	var packetRX uint64 = 0
-	var packetRXSpeed uint64 = 0
+	var packetRXRate uint64 = 0
 	var packetTX uint64 = 0
-	var packetTXSpeed uint64 = 0
+	var packetTXRate uint64 = 0
 	for {
 		// Get time of last packet
 		uplinkLastByte, err := historydb.C.Get([]byte("uplink.last"))
@@ -65,12 +65,12 @@ func Status(c fiber.Ctx) error {
 		}
 		packetRX = uint64(value)
 
-		// Get rx speed
-		rxRecent, err := historydb.GetDataSlice("uplink.packet.rx.speed")
+		// Get rx rate
+		rxRecent, err := historydb.GetDataSlice("uplink.packet.rx.rate")
 		if err != nil {
 			continue
 		}
-		packetRXSpeed = uint64(len(rxRecent))
+		packetRXRate = uint64(len(rxRecent))
 
 		// Get tx count
 		value, err = historydb.GetValue("uplink.packet.tx.count")
@@ -79,45 +79,59 @@ func Status(c fiber.Ctx) error {
 		}
 		packetTX = uint64(value)
 
-		// Get rx speed
-		txRecent, err := historydb.GetDataSlice("uplink.packet.tx.speed")
+		// Get rx rate
+		txRecent, err := historydb.GetDataSlice("uplink.packet.tx.rate")
 		if err != nil {
 			continue
 		}
-		packetTXSpeed = uint64(len(txRecent))
+		packetTXRate = uint64(len(txRecent))
 
 		break
 	}
 
 	// Get listeners
-	// TODO: Return status here
 	listeners := make([]model.ReturnListener, 0)
 	for _, l := range listener.Listeners {
 		if l.Visible == "hidden" {
 			continue
 		}
 		listeners = append(listeners, model.ReturnListener{
-			Name:     l.Name,
-			Mode:     l.Type,
-			Protocol: l.Protocol,
-			Host:     l.Host,
-			Port:     l.Port,
+			Name:         l.Name,
+			Mode:         l.Type,
+			Protocol:     l.Protocol,
+			Host:         l.Host,
+			Port:         l.Port,
+			PacketRX:     l.Stats.ReceivedPackets,
+			PacketRXRate: l.Stats.RecvPacketRate,
+			PacketTX:     l.Stats.SentPackets,
+			PacketTXRate: l.Stats.SendPacketRate,
+			BytesRX:      l.Stats.ReceivedBytes,
+			BytesRXRate:  l.Stats.RecvByteRate,
+			BytesTX:      l.Stats.SentBytes,
+			BytesTXRate:  l.Stats.SendByteRate,
 		})
 	}
 
 	// Get clients
-	// TODO: Return status here
 	clients := make([]model.ReturnClient, 0)
 	for _, v := range listener.Clients {
 		clients = append(clients, model.ReturnClient{
-			At:       v.At,
-			ID:       v.ID,
-			Addr:     v.Addr,
-			Uptime:   v.Uptime,
-			Last:     v.Last,
-			Software: v.Software,
-			Version:  v.Version,
-			Filter:   v.Filter,
+			At:           v.At,
+			ID:           v.ID,
+			Addr:         v.Addr,
+			Uptime:       v.Uptime,
+			Last:         v.Last,
+			Software:     v.Software,
+			Version:      v.Version,
+			Filter:       v.Filter,
+			PacketRX:     v.Stats.ReceivedPackets,
+			PacketRXRate: v.Stats.RecvPacketRate,
+			PacketTX:     v.Stats.SentPackets,
+			PacketTXRate: v.Stats.SendPacketRate,
+			BytesRX:      v.Stats.ReceivedBytes,
+			BytesRXRate:  v.Stats.RecvByteRate,
+			BytesTX:      v.Stats.SentBytes,
+			BytesTXRate:  v.Stats.SendByteRate,
 		})
 	}
 
@@ -138,23 +152,23 @@ func Status(c fiber.Ctx) error {
 			Memory:   system.Status.Memory,
 		},
 		Uplink: model.ReturnUplink{
-			ID:            uplink.Client.Callsign(),
-			Mode:          uplink.Client.Mode(),
-			Protocol:      uplink.Client.Protocol(),
-			Host:          uplink.Client.Host(),
-			Port:          uplink.Client.Port(),
-			Server:        uplink.Client.Server(),
-			Up:            uplink.Client.Up(),
-			Uptime:        uplink.Client.Uptime(),
-			Last:          uplinkLast,
-			PacketRX:      packetRX,
-			PacketRXSpeed: packetRXSpeed,
-			PacketTX:      packetTX,
-			PacketTXSpeed: packetTXSpeed,
-			BytesRX:       uplink.Client.GetStats().TotalRecvBytes,
-			BytesRXSpeed:  uplink.Client.GetStats().CurrentRecvRate,
-			BytesTX:       uplink.Client.GetStats().TotalSentBytes,
-			BytesTXSpeed:  uplink.Client.GetStats().CurrentSentRate,
+			ID:           uplink.Client.Callsign(),
+			Mode:         uplink.Client.Mode(),
+			Protocol:     uplink.Client.Protocol(),
+			Host:         uplink.Client.Host(),
+			Port:         uplink.Client.Port(),
+			Server:       uplink.Client.Server(),
+			Up:           uplink.Client.Up(),
+			Uptime:       uplink.Client.Uptime(),
+			Last:         uplinkLast,
+			PacketRX:     packetRX,
+			PacketRXRate: packetRXRate,
+			PacketTX:     packetTX,
+			PacketTXRate: packetTXRate,
+			BytesRX:      uplink.Client.GetStats().TotalRecvBytes,
+			BytesRXRate:  uplink.Client.GetStats().CurrentRecvRate,
+			BytesTX:      uplink.Client.GetStats().TotalSentBytes,
+			BytesTXRate:  uplink.Client.GetStats().CurrentSentRate,
 		},
 		Listeners: listeners,
 		Clients:   clients,

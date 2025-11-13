@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
@@ -33,6 +34,9 @@ type TCPAPRSClient struct {
 	dataCh      <-chan uplink.StreamData
 	mode        client.Mode
 	filter      string
+	server      *TCPAPRSServer
+
+	stats *Statistics // Client statistics
 }
 
 // TCPAPRSServer provides a struct for APRS server
@@ -43,14 +47,47 @@ type TCPAPRSServer struct {
 	mu       sync.RWMutex
 	stopChan chan struct{}
 	mode     client.Mode
+	index    int
+
+	stats *Statistics // Server statistics
+}
+
+// Global statistics for all servers
+var (
+	globalStats Statistics
+	statsMutex  sync.RWMutex
+)
+
+// updateAllRates updates rates for global Stats and all clients
+func updateAllRates() {
+	statsMutex.Lock()
+	defer statsMutex.Unlock()
+
+	// Update global rates
+	currentSentPackets := atomic.LoadUint64(&globalStats.SentPackets)
+	currentReceivedPackets := atomic.LoadUint64(&globalStats.ReceivedPackets)
+	currentSentBytes := atomic.LoadUint64(&globalStats.SentBytes)
+	currentReceivedBytes := atomic.LoadUint64(&globalStats.ReceivedBytes)
+
+	globalStats.SendPacketRate = currentSentPackets - globalStats.lastSentPackets
+	globalStats.RecvPacketRate = currentReceivedPackets - globalStats.lastReceivedPackets
+	globalStats.SendByteRate = currentSentBytes - globalStats.lastSentBytes
+	globalStats.RecvByteRate = currentReceivedBytes - globalStats.lastReceivedBytes
+
+	globalStats.lastSentPackets = currentSentPackets
+	globalStats.lastReceivedPackets = currentReceivedPackets
+	globalStats.lastSentBytes = currentSentBytes
+	globalStats.lastReceivedBytes = currentReceivedBytes
 }
 
 // NewTCPAPRSServer creates a new APRS server
-func NewTCPAPRSServer(mode client.Mode) *TCPAPRSServer {
+func NewTCPAPRSServer(mode client.Mode, index int) *TCPAPRSServer {
 	return &TCPAPRSServer{
 		clients:  make(map[*TCPAPRSClient]bool),
 		stopChan: make(chan struct{}),
 		mode:     mode,
+		index:    index,
+		stats:    new(Statistics),
 	}
 }
 
@@ -63,6 +100,9 @@ func (s *TCPAPRSServer) Start(addr string) error {
 	}
 
 	logger.L.Info(fmt.Sprintf("APRS listening on %s", addr))
+
+	// Start statistics updater for this server
+	go s.updateStats()
 
 	// Connection clean goroutine
 	go s.cleanupInactiveClients()
@@ -81,6 +121,71 @@ func (s *TCPAPRSServer) Start(addr string) error {
 		}
 
 		go s.handleClient(conn)
+	}
+}
+
+// updateStats updates server statistics rates every second
+func (s *TCPAPRSServer) updateStats() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			s.mu.Lock()
+			// Update server rates
+			currentSentPackets := s.stats.SentPackets
+			currentReceivedPackets := s.stats.ReceivedPackets
+			currentSentBytes := s.stats.SentBytes
+			currentReceivedBytes := s.stats.ReceivedBytes
+
+			s.stats.SendPacketRate = currentSentPackets - s.stats.lastSentPackets
+			s.stats.RecvPacketRate = currentReceivedPackets - s.stats.lastReceivedPackets
+			s.stats.SendByteRate = currentSentBytes - s.stats.lastSentBytes
+			s.stats.RecvByteRate = currentReceivedBytes - s.stats.lastReceivedBytes
+
+			s.stats.lastSentPackets = currentSentPackets
+			s.stats.lastReceivedPackets = currentReceivedPackets
+			s.stats.lastSentBytes = currentSentBytes
+			s.stats.lastReceivedBytes = currentReceivedBytes
+
+			Listeners[s.index].Stats = *s.stats
+
+			s.mu.Unlock()
+
+			// Update client rates
+			s.updateClientRates()
+		case <-s.stopChan:
+			return
+		}
+	}
+}
+
+// updateClientRates updates rates for all connected clients
+func (s *TCPAPRSServer) updateClientRates() {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	for c := range s.clients {
+		c.mu.Lock()
+		currentSentPackets := c.stats.SentPackets
+		currentReceivedPackets := c.stats.ReceivedPackets
+		currentSentBytes := c.stats.SentBytes
+		currentReceivedBytes := c.stats.ReceivedBytes
+
+		c.stats.SendPacketRate = currentSentPackets - c.stats.lastSentPackets
+		c.stats.RecvPacketRate = currentReceivedPackets - c.stats.lastReceivedPackets
+		c.stats.SendByteRate = currentSentBytes - c.stats.lastSentBytes
+		c.stats.RecvByteRate = currentReceivedBytes - c.stats.lastReceivedBytes
+
+		c.stats.lastSentPackets = currentSentPackets
+		c.stats.lastReceivedPackets = currentReceivedPackets
+		c.stats.lastSentBytes = currentSentBytes
+		c.stats.lastReceivedBytes = currentReceivedBytes
+
+		Clients[c].Stats = *c.stats
+
+		c.mu.Unlock()
 	}
 }
 
@@ -105,6 +210,8 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		conn:       conn,
 		lastActive: time.Now(),
 		mode:       s.mode,
+		stats:      new(Statistics),
+		server:     s,
 	}
 
 	// Register a client
@@ -116,6 +223,7 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		Uptime: time.Now(),
 		Last:   c.lastActive,
 		c:      c,
+		Stats:  *c.stats,
 	}
 	s.mu.Unlock()
 
@@ -165,22 +273,32 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		// Record last activate status
 		c.lastActive = time.Now()
 		Clients[c].Last = c.lastActive
+
 		// Process received data
 		s.processPacket(c, line)
 	}
 }
 
 // processPacket processes received data
-func (s *TCPAPRSServer) processPacket(client *TCPAPRSClient, packet string) {
+func (s *TCPAPRSServer) processPacket(c *TCPAPRSClient, packet string) {
 	// Parse packet
 	if strings.HasPrefix(packet, "user ") {
-		s.handleLogin(client, packet)
+		s.handleLogin(c, packet)
 	} else if strings.HasPrefix(packet, "#") {
-		s.handleComment(client)
+		s.handleComment(c)
 	} else if strings.Contains(packet, ">") {
-		s.handleAPRSData(client, packet)
+		s.handleAPRSData(c, packet)
+
+		// Update statistics for received data
+		packetSize := uint64(len(packet))
+		atomic.AddUint64(&c.stats.ReceivedPackets, 1)
+		atomic.AddUint64(&c.stats.ReceivedBytes, packetSize)
+		atomic.AddUint64(&s.stats.ReceivedPackets, 1)
+		atomic.AddUint64(&s.stats.ReceivedBytes, packetSize)
+		atomic.AddUint64(&globalStats.ReceivedPackets, 1)
+		atomic.AddUint64(&globalStats.ReceivedBytes, packetSize)
 	} else {
-		_ = client.Send("# invalid packet")
+		_ = c.Send("# invalid packet")
 	}
 }
 
@@ -262,8 +380,6 @@ func (s *TCPAPRSServer) handleAPRSData(client *TCPAPRSClient, packet string) {
 	}
 
 	uplink.Stream.Write(packet, client)
-
-	fmt.Printf("APRS data from %s: %s\n", client.callSign, packet)
 }
 
 // handleUplinkData sends data to client
@@ -294,6 +410,13 @@ func (c *TCPAPRSClient) Send(data string) error {
 	}
 
 	_, err := fmt.Fprintf(c.conn, "%s\n", data)
+	if err == nil {
+		// Update send statistics
+		packetSize := uint64(len(data))
+		atomic.AddUint64(&c.stats.SentPackets, 1)
+		atomic.AddUint64(&c.stats.SentBytes, packetSize)
+		c.server.UpdateServerSendStats(1, packetSize)
+	}
 	return err
 }
 
@@ -341,4 +464,12 @@ func (s *TCPAPRSServer) ClientCount() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return len(s.clients)
+}
+
+// UpdateServerSendStats updates server send statistics (called when sending data to clients)
+func (s *TCPAPRSServer) UpdateServerSendStats(packets uint64, bytes uint64) {
+	atomic.AddUint64(&s.stats.SentPackets, packets)
+	atomic.AddUint64(&s.stats.SentBytes, bytes)
+	atomic.AddUint64(&globalStats.SentPackets, packets)
+	atomic.AddUint64(&globalStats.SentBytes, bytes)
 }

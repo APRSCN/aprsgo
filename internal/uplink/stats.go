@@ -10,16 +10,14 @@ import (
 
 // stats is the daemon to record stats data
 func stats() {
-	// Waiting for uplink start
-	time.Sleep(5 * time.Second)
 	for {
 		// Get time now
 		now := time.Now()
 
-		// Record packet rx speed
-		rxRecent, err := historydb.GetDataSlice("uplink.packet.rx.speed")
+		// Record packet rx rate
+		rxRecent, err := historydb.GetDataSlice("uplink.packet.rx.rate")
 		if err != nil {
-			logger.L.Warn("Failed to read uplink.packet.rx.speed", zap.Error(err))
+			logger.L.Warn("Failed to read uplink.packet.rx.rate", zap.Error(err))
 		} else {
 			err = historydb.RecordDataPoint("stats.uplink.packet.rx", [2]any{
 				float64(now.UnixNano()) / 1e9,
@@ -30,7 +28,7 @@ func stats() {
 			}
 		}
 
-		// Record bytes rx speed
+		// Record bytes rx rate
 		err = historydb.RecordDataPoint("stats.uplink.bytes.rx", [2]any{
 			float64(now.UnixNano()) / 1e9,
 			Client.GetStats().CurrentRecvRate,
@@ -39,10 +37,10 @@ func stats() {
 			logger.L.Warn("Failed to record stats.uplink.bytes.rx", zap.Error(err))
 		}
 
-		// Record packet tx speed
-		txRecent, err := historydb.GetDataSlice("uplink.packet.tx.speed")
+		// Record packet tx rate
+		txRecent, err := historydb.GetDataSlice("uplink.packet.tx.rate")
 		if err != nil {
-			logger.L.Warn("Failed to read uplink.packet.tx.speed", zap.Error(err))
+			logger.L.Warn("Failed to read uplink.packet.tx.rate", zap.Error(err))
 		} else {
 			err = historydb.RecordDataPoint("stats.uplink.packet.tx", [2]any{
 				float64(now.UnixNano()) / 1e9,
@@ -53,7 +51,7 @@ func stats() {
 			}
 		}
 
-		// Record bytes tx speed
+		// Record bytes tx rate
 		err = historydb.RecordDataPoint("stats.uplink.bytes.tx", [2]any{
 			float64(now.UnixNano()) / 1e9,
 			Client.GetStats().CurrentSentRate,

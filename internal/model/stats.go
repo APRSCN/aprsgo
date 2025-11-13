@@ -1,7 +1,7 @@
 package model
 
-// HistoryReturn provides a struct to return history of server
-type HistoryReturn struct {
+// StatsReturn provides a struct to return stats of server
+type StatsReturn struct {
 	Msg            string   `json:"msg"`
 	Memory         [][2]any `json:"memory"`
 	UplinkPacketRX [][2]any `json:"uplinkPacketRX"`

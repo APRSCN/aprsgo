@@ -64,8 +64,8 @@ func fiberAPP() *fiber.App {
 	// Status info handler
 	app.All("/status", Status)
 
-	// History info handler
-	app.All("/history", History)
+	// Stats info handler
+	app.All("/stats", Stats)
 
 	// Not found router handler
 	app.Use(func(c fiber.Ctx) error {

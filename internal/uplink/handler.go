@@ -27,7 +27,7 @@ func packetHandler(packet string) {
 	}
 
 	// Write rx mark
-	err = historydb.RecordDataPoint("uplink.packet.rx.speed", [2]any{
+	err = historydb.RecordDataPoint("uplink.packet.rx.rate", [2]any{
 		float64(now.UnixNano()) / 1e9,
 		nil,
 	})
@@ -53,7 +53,7 @@ func sender(dataCh <-chan StreamData) {
 			}
 
 			// Write tx mark
-			err = historydb.RecordDataPoint("uplink.packet.tx.speed", [2]any{
+			err = historydb.RecordDataPoint("uplink.packet.tx.rate", [2]any{
 				float64(now.UnixNano()) / 1e9,
 				nil,
 			})

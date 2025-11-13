@@ -6,17 +6,17 @@ import (
 	"go.uber.org/zap"
 )
 
-// ClearSpeed clears expired speed record
-func ClearSpeed() {
+// ClearRate clears expired rate record
+func ClearRate() {
 	// Clear expired tx record
-	err := historydb.ClearDataSlice("uplink.packet.tx.speed", 1)
+	err := historydb.ClearDataSlice("uplink.packet.tx.rate", 1)
 	if err != nil {
-		logger.L.Warn("Failed to clear data points for uplink.packet.tx.speed", zap.Error(err))
+		logger.L.Warn("Failed to clear data points for uplink.packet.tx.rate", zap.Error(err))
 	}
 
 	// Clear expired rx record
-	err = historydb.ClearDataSlice("uplink.packet.rx.speed", 1)
+	err = historydb.ClearDataSlice("uplink.packet.rx.rate", 1)
 	if err != nil {
-		logger.L.Warn("Failed to clear data points for uplink.packet.rx.speed", zap.Error(err))
+		logger.L.Warn("Failed to clear data points for uplink.packet.rx.rate", zap.Error(err))
 	}
 }
