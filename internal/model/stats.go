@@ -2,7 +2,7 @@ package model
 
 // Statistics holds all statistics data
 type Statistics struct {
-	// Client statistics
+	// OnlineClient statistics
 	SentPackets     uint64 `json:"sentPackets"`     // Total packets sent to client
 	ReceivedPackets uint64 `json:"receivedPackets"` // Total packets received from client
 	SentBytes       uint64 `json:"sentBytes"`       // Total bytes sent to client

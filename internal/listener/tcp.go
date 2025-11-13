@@ -82,12 +82,13 @@ func updateAllRates() {
 }
 
 // NewTCPAPRSServer creates a new APRS server
-func NewTCPAPRSServer(mode client.Mode) *TCPAPRSServer {
+func NewTCPAPRSServer(mode client.Mode, index int) *TCPAPRSServer {
 	return &TCPAPRSServer{
 		clients:  make(map[*TCPAPRSClient]bool),
 		stopChan: make(chan struct{}),
 		mode:     mode,
 		stats:    new(model.Statistics),
+		index:    index,
 	}
 }
 
@@ -157,9 +158,7 @@ func (s *TCPAPRSServer) updateStats() {
 			s.stats.LastSentBytes = currentSentBytes
 			s.stats.LastReceivedBytes = currentReceivedBytes
 
-			listener := Listeners[s]
-			listener.Stats = *s.stats
-			Listeners[s] = listener
+			Listeners[s.index].Stats = *s.stats
 
 			s.mu.Unlock()
 
@@ -235,6 +234,10 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		c:      c,
 		Stats:  *c.stats,
 	}
+	Listeners[s.index].OnlineClient = len(s.clients)
+	if Listeners[s.index].OnlineClient > Listeners[s.index].PeakClient {
+		Listeners[s.index].PeakClient = Listeners[s.index].OnlineClient
+	}
 	s.mu.Unlock()
 
 	defer func() {
@@ -242,6 +245,7 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		s.mu.Lock()
 		delete(s.clients, c)
 		delete(Clients, c)
+		Listeners[s.index].OnlineClient = len(s.clients)
 		s.mu.Unlock()
 		c.Close()
 	}()
@@ -363,10 +367,11 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 		client.mu.Lock()
 		client.callSign = callSign
 		client.verified = true
+		Clients[client].Verified = true
 		client.mu.Unlock()
 
 		_ = client.Send(fmt.Sprintf("# logresp %s verified, server %s", callSign, config.C.GetString("server.id")))
-		logger.L.Debug(fmt.Sprintf("Client logged in as %s", callSign), zap.String("client", client.conn.RemoteAddr().String()))
+		logger.L.Debug(fmt.Sprintf("OnlineClient logged in as %s", callSign), zap.String("client", client.conn.RemoteAddr().String()))
 	} else {
 		_ = client.Send(fmt.Sprintf("# logresp %s unverified, server %s", callSign, config.C.GetString("server.id")))
 	}
@@ -461,6 +466,8 @@ func (s *TCPAPRSServer) cleanupInactiveClients() {
 				if now.Sub(c.lastActive) > 15*time.Minute {
 					c.Close()
 					delete(s.clients, c)
+					delete(Clients, c)
+					Listeners[s.index].OnlineClient = len(s.clients)
 				}
 				c.mu.Unlock()
 			}

@@ -55,6 +55,8 @@ func Status(c fiber.Ctx) error {
 			Protocol:     l.Protocol,
 			Host:         l.Host,
 			Port:         l.Port,
+			OnlineClient: l.OnlineClient,
+			PeakClient:   l.PeakClient,
 			PacketRX:     l.Stats.ReceivedPackets,
 			PacketRXRate: l.Stats.RecvPacketRate,
 			PacketTX:     l.Stats.SentPackets,
@@ -72,6 +74,7 @@ func Status(c fiber.Ctx) error {
 		clients = append(clients, model.ReturnClient{
 			At:           v.At,
 			ID:           v.ID,
+			Verified:     v.Verified,
 			Addr:         v.Addr,
 			Uptime:       v.Uptime,
 			Last:         v.Last,

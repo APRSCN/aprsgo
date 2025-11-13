@@ -50,6 +50,8 @@ type ReturnListener struct {
 	Protocol     string `json:"protocol"`
 	Host         string `json:"host"`
 	Port         int    `json:"port"`
+	OnlineClient int    `json:"onlineClient"`
+	PeakClient   int    `json:"peakClient"`
 	PacketRX     uint64 `json:"packetRX"`
 	PacketRXRate uint64 `json:"packetRXRate"`
 	PacketTX     uint64 `json:"packetTX"`
@@ -64,6 +66,7 @@ type ReturnListener struct {
 type ReturnClient struct {
 	At           string    `json:"at"`
 	ID           string    `json:"id"`
+	Verified     bool      `json:"verified"`
 	Addr         string    `json:"addr"`
 	Uptime       time.Time `json:"uptime"`
 	Last         time.Time `json:"last"`

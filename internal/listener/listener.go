@@ -14,13 +14,15 @@ import (
 
 // Listener provides a struct to record listener
 type Listener struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Protocol string `json:"protocol"`
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Visible  string `json:"visible"`
-	Filter   string `json:"filter"`
+	Name         string
+	Type         string
+	Protocol     string
+	Host         string
+	Port         int
+	Visible      string
+	Filter       string
+	OnlineClient int
+	PeakClient   int
 
 	s *TCPAPRSServer // For closing
 
@@ -28,18 +30,19 @@ type Listener struct {
 }
 
 // Listeners records all listeners
-var Listeners = make(map[any]Listener)
+var Listeners = make([]Listener, 0)
 
 // Client provides a struct to record client
 type Client struct {
-	At       string    `json:"at"`
-	ID       string    `json:"id"`
-	Addr     string    `json:"addr"`
-	Uptime   time.Time `json:"uptime"`
-	Last     time.Time `json:"last"`
-	Software string    `json:"software"`
-	Version  string    `json:"version"`
-	Filter   string    `json:"filter"`
+	At       string
+	ID       string
+	Verified bool
+	Addr     string
+	Uptime   time.Time
+	Last     time.Time
+	Software string
+	Version  string
+	Filter   string
 
 	c *TCPAPRSClient // For closing
 
@@ -70,7 +73,7 @@ func load() {
 	}
 
 	// Remove listeners
-	Listeners = make(map[any]Listener)
+	Listeners = make([]Listener, 0)
 
 	// Load config
 	var listenersConfig []model.ListenerConfig
@@ -91,10 +94,10 @@ func load() {
 		}
 
 		// Create APRS server
-		server := NewTCPAPRSServer(client.Mode(listener.Mode))
+		server := NewTCPAPRSServer(client.Mode(listener.Mode), len(Listeners))
 
 		// Record listener
-		Listeners[server] = Listener{
+		Listeners = append(Listeners, Listener{
 			Name:     listener.Name,
 			Type:     listener.Mode,
 			Protocol: listener.Protocol,
@@ -104,7 +107,7 @@ func load() {
 			Filter:   listener.Filter,
 			s:        server,
 			Stats:    model.Statistics{},
-		}
+		})
 
 		// Start server
 		err = server.Start(fmt.Sprintf("%s:%d", listener.Host, listener.Port))
