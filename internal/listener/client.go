@@ -45,11 +45,16 @@ func GetWithoutOK(key any) *Client {
 	return Clients[key]
 }
 
-// GetAll gets all clients
-func GetAll() map[any]*Client {
-	ClientsMutex.RLock()
-	defer ClientsMutex.RUnlock()
-	return Clients
+// KickOld kicks old client
+func KickOld(client any, callSign string) {
+	ClientsMutex.Lock()
+	defer ClientsMutex.Unlock()
+
+	for k, v := range Clients {
+		if k != client && v.ID == callSign {
+			v.c.Close()
+		}
+	}
 }
 
 // Set a client

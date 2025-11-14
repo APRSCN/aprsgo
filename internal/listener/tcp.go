@@ -363,16 +363,13 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 	}
 	// Record client
 	GetWithoutOK(client).ID = callSign
+	client.callSign = callSign
 	GetWithoutOK(client).Software = client.software
 	GetWithoutOK(client).Version = client.version
 	GetWithoutOK(client).Filter = client.filter
 
 	// Kick old client
-	for k, v := range GetAll() {
-		if k != client && v.ID == callSign {
-			v.c.Close()
-		}
-	}
+	KickOld(client, callSign)
 
 	// Calc passcode
 	intPasscode, _ := strconv.Atoi(passcode)
@@ -381,7 +378,6 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 	if aprsutils.Passcode(callSign) == intPasscode {
 		client.mu.Lock()
 
-		client.callSign = callSign
 		client.verified = true
 		GetWithoutOK(client).Verified = true
 
@@ -413,14 +409,14 @@ func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
 		return
 	}
 
-	uplink.Stream.Write(packet, GetWithoutOK(c).ID)
+	uplink.Stream.Write(packet, c.callSign)
 }
 
 // handleUplinkData sends data to client
 func (c *TCPAPRSClient) handleUplinkData() {
 	for data := range c.dataCh {
 		c.mu.Lock()
-		if c.loggedIn && c.conn != nil && GetWithoutOK(c) != nil && data.Writer != GetWithoutOK(c).ID {
+		if c.loggedIn && c.conn != nil && data.Writer != c.callSign {
 			switch c.mode {
 			case client.Fullfeed:
 				_ = c.Send(data.Data)
