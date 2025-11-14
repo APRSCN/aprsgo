@@ -462,7 +462,7 @@ func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
 	}
 
 	// Replace path
-	packet = qConstruct.Replace(packet, parsed.Path, result.Path)
+	packet = qConstruct.Replace(packet, parsed, result.Path)
 	parsed, err = parser.Parse(packet)
 	if err != nil {
 		// Drop error

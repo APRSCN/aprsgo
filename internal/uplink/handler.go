@@ -59,7 +59,6 @@ func sendHandler(dataCh <-chan StreamData) {
 			// Get time now
 			//now := time.Now()
 
-			// TODO: filter and dupecheck here
 			_ = Client.SendPacket(data.Data.Raw)
 
 			// Count packet tx
