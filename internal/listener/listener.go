@@ -2,7 +2,6 @@ package listener
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/logger"
@@ -31,26 +30,6 @@ type Listener struct {
 
 // Listeners records all listeners
 var Listeners = make([]Listener, 0)
-
-// Client provides a struct to record client
-type Client struct {
-	At       string
-	ID       string
-	Verified bool
-	Addr     string
-	Uptime   time.Time
-	Last     time.Time
-	Software string
-	Version  string
-	Filter   string
-
-	c *TCPAPRSClient // For closing
-
-	Stats model.Statistics
-}
-
-// Clients records all clients
-var Clients = make(map[any]*Client)
 
 // InitListener inits listener daemon
 func InitListener() {

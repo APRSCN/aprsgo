@@ -197,7 +197,7 @@ func (s *TCPAPRSServer) updateClientRates() {
 		c.stats.LastSentBytes = currentSentBytes
 		c.stats.LastReceivedBytes = currentReceivedBytes
 
-		Clients[c].Stats = *c.stats
+		GetWithoutOK(c).Stats = *c.stats
 
 		c.mu.Unlock()
 	}
@@ -231,14 +231,14 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 	// Register a client
 	s.mu.Lock()
 	s.clients[c] = true
-	Clients[c] = &Client{
+	Set(c, &Client{
 		At:     s.listener.Addr().String(),
 		Addr:   c.conn.RemoteAddr().String(),
 		Uptime: time.Now(),
 		Last:   c.lastActive,
 		c:      c,
 		Stats:  *c.stats,
-	}
+	})
 	Listeners[s.index].OnlineClient = len(s.clients)
 	if Listeners[s.index].OnlineClient > Listeners[s.index].PeakClient {
 		Listeners[s.index].PeakClient = Listeners[s.index].OnlineClient
@@ -249,7 +249,7 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		// Delete a client
 		s.mu.Lock()
 		delete(s.clients, c)
-		delete(Clients, c)
+		Del(c)
 		if len(Listeners) > s.index {
 			Listeners[s.index].OnlineClient = len(s.clients)
 		}
@@ -293,7 +293,7 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 
 		// Record last activate status
 		c.lastActive = time.Now()
-		Clients[c].Last = c.lastActive
+		GetWithoutOK(c).Last = c.lastActive
 
 		// Update statistics for received data
 		packetSize := uint64(len(line))
@@ -362,13 +362,13 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 		}
 	}
 	// Record client
-	Clients[client].ID = callSign
-	Clients[client].Software = client.software
-	Clients[client].Version = client.version
-	Clients[client].Filter = client.filter
+	GetWithoutOK(client).ID = callSign
+	GetWithoutOK(client).Software = client.software
+	GetWithoutOK(client).Version = client.version
+	GetWithoutOK(client).Filter = client.filter
 
 	// Kick old client
-	for k, v := range Clients {
+	for k, v := range GetAll() {
 		if k != client && v.ID == callSign {
 			v.c.Close()
 		}
@@ -383,7 +383,7 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 
 		client.callSign = callSign
 		client.verified = true
-		Clients[client].Verified = true
+		GetWithoutOK(client).Verified = true
 
 		_ = client.Send(fmt.Sprintf("# logresp %s verified, server %s", callSign, config.C.GetString("server.id")))
 		logger.L.Debug(fmt.Sprintf("OnlineClient logged in as %s", callSign), zap.String("client", client.conn.RemoteAddr().String()))
@@ -413,14 +413,14 @@ func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
 		return
 	}
 
-	uplink.Stream.Write(packet, Clients[c].ID)
+	uplink.Stream.Write(packet, GetWithoutOK(c).ID)
 }
 
 // handleUplinkData sends data to client
 func (c *TCPAPRSClient) handleUplinkData() {
 	for data := range c.dataCh {
 		c.mu.Lock()
-		if c.loggedIn && c.conn != nil && Clients[c] != nil && data.Writer != Clients[c].ID {
+		if c.loggedIn && c.conn != nil && GetWithoutOK(c) != nil && data.Writer != GetWithoutOK(c).ID {
 			switch c.mode {
 			case client.Fullfeed:
 				_ = c.Send(data.Data)
@@ -499,7 +499,7 @@ func (s *TCPAPRSServer) cleanupInactiveClients() {
 				if now.Sub(c.lastActive) > 15*time.Minute {
 					c.Close()
 					delete(s.clients, c)
-					delete(Clients, c)
+					Del(c)
 					Listeners[s.index].OnlineClient = len(s.clients)
 				}
 				c.mu.Unlock()
