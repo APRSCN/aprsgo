@@ -21,6 +21,7 @@ import (
 	"github.com/APRSCN/aprsutils"
 	"github.com/APRSCN/aprsutils/client"
 	"github.com/APRSCN/aprsutils/parser"
+	"github.com/APRSCN/aprsutils/qConstruct"
 	"go.uber.org/zap"
 )
 
@@ -440,6 +441,29 @@ func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
 
 	// Try to parse
 	parsed, err := parser.Parse(packet)
+	if err != nil {
+		// Drop error
+		c.stats.ReceivedErrors++
+		return
+	}
+
+	// Process QConstruct
+	qConfig := &qConstruct.QConfig{
+		ServerLogin:    config.C.GetString("server.id"),
+		ClientLogin:    c.callSign,
+		ConnectionType: qConstruct.ConnectionVerified,
+		EnableTrace:    false,
+		IsVerified:     true,
+	}
+	result, err := qConstruct.QConstruct(parsed, qConfig)
+	if err != nil || result.ShouldDrop || result.IsLoop {
+		c.stats.ReceivedQDrop++
+		return
+	}
+
+	// Replace path
+	packet = qConstruct.Replace(packet, parsed.Path, result.Path)
+	parsed, err = parser.Parse(packet)
 	if err != nil {
 		// Drop error
 		c.stats.ReceivedErrors++

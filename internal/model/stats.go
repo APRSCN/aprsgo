@@ -6,6 +6,7 @@ type Statistics struct {
 	ReceivedPackets uint64 `json:"receivedPackets"`
 	ReceivedDups    uint64 `json:"receivedDups"`
 	ReceivedErrors  uint64 `json:"receivedErrors"`
+	ReceivedQDrop   uint64 `json:"receivedQDrop"`
 	SentBytes       uint64 `json:"sentBytes"`
 	ReceivedBytes   uint64 `json:"receivedBytes"`
 
