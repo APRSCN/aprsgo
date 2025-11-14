@@ -26,8 +26,11 @@ type Client struct {
 
 // Clients records all clients
 var Clients = make(map[any]*Client)
+
+// ClientsMutex is the operation lock of clients
 var ClientsMutex sync.RWMutex
 
+// Get a client with OK
 func Get(key any) (*Client, bool) {
 	ClientsMutex.RLock()
 	defer ClientsMutex.RUnlock()
@@ -35,24 +38,28 @@ func Get(key any) (*Client, bool) {
 	return v, ok
 }
 
+// GetWithoutOK gets a client without OK
 func GetWithoutOK(key any) *Client {
 	ClientsMutex.RLock()
 	defer ClientsMutex.RUnlock()
 	return Clients[key]
 }
 
+// GetAll gets all clients
 func GetAll() map[any]*Client {
 	ClientsMutex.RLock()
 	defer ClientsMutex.RUnlock()
 	return Clients
 }
 
+// Set a client
 func Set(key any, v *Client) {
 	ClientsMutex.Lock()
 	defer ClientsMutex.Unlock()
 	Clients[key] = v
 }
 
+// Del a client
 func Del(key any) {
 	ClientsMutex.Lock()
 	defer ClientsMutex.Unlock()

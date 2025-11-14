@@ -3,7 +3,7 @@ module github.com/APRSCN/aprsgo
 go 1.25.3
 
 require (
-	github.com/APRSCN/aprsutils v0.0.0-20251114085705-765f552f7693
+	github.com/APRSCN/aprsutils v0.0.0-20251114125816-84cfeff2904c
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/ghinknet/json v1.1.1
 	github.com/go-playground/validator/v10 v10.28.0
