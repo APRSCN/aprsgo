@@ -3,7 +3,7 @@ module github.com/APRSCN/aprsgo
 go 1.25.3
 
 require (
-	github.com/APRSCN/aprsutils v0.0.0-20251114125816-84cfeff2904c
+	github.com/APRSCN/aprsutils v0.0.0-20251114143751-ac97dc1460d4
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/ghinknet/json v1.1.1
 	github.com/go-playground/validator/v10 v10.28.0
@@ -23,6 +23,7 @@ require (
 	github.com/bytedance/sonic v1.14.2 // indirect
 	github.com/bytedance/sonic/loader v0.4.0 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.11 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
@@ -40,6 +41,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect

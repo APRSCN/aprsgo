@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"net"
 	"slices"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
+	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsgo/internal/uplink"
@@ -40,7 +42,9 @@ type TCPAPRSClient struct {
 	dataCh      <-chan uplink.StreamData
 	mode        client.Mode
 	filter      string
-	server      *TCPAPRSServer
+
+	server *TCPAPRSServer
+	dup    *historydb.MapFloat64History
 
 	stats *model.Statistics // Client statistics
 }
@@ -224,8 +228,11 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		conn:       conn,
 		lastActive: time.Now(),
 		mode:       s.mode,
-		stats:      new(model.Statistics),
-		server:     s,
+
+		server: s,
+		dup:    historydb.NewMapFloat64History(),
+
+		stats: new(model.Statistics),
 	}
 
 	// Register a client
@@ -401,6 +408,10 @@ func (s *TCPAPRSServer) handleComment(client *TCPAPRSClient) {
 
 // handleAPRSData handles APRS packet
 func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
+	// Get time now
+	now := time.Now()
+
+	// Lock
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -409,7 +420,33 @@ func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
 		return
 	}
 
-	uplink.Stream.Write(packet, c.callSign)
+	// Hash the data (dup check)
+	h64 := fnv.New64a()
+	_, err := h64.Write([]byte(packet))
+	if err == nil {
+		hash64 := h64.Sum64()
+
+		// Clear first
+		c.dup.ClearByValue(30)
+
+		if c.dup.Contain(hash64) {
+			// Drop dup
+			c.stats.ReceivedDups++
+			return
+		}
+
+		go c.dup.Record(hash64, float64(now.UnixNano())/1e9)
+	}
+
+	// Try to parse
+	parsed, err := parser.Parse(packet)
+	if err != nil {
+		// Drop error
+		c.stats.ReceivedErrors++
+		return
+	}
+
+	uplink.Stream.Write(parsed, c.callSign)
 }
 
 // handleUplinkData sends data to client
@@ -419,27 +456,19 @@ func (c *TCPAPRSClient) handleUplinkData() {
 		if c.loggedIn && c.conn != nil && data.Writer != c.callSign {
 			switch c.mode {
 			case client.Fullfeed:
-				_ = c.Send(data.Data)
+				_ = c.Send(data.Data.Raw)
 				c.stats.SentPackets += 1
 			case client.IGate:
 				if len(Listeners) > c.server.index && Listeners[c.server.index].Filter != "" {
-					// Parse APRS packet
-					parsed, err := parser.Parse(data.Data)
-					if err == nil {
-						if Filter(Listeners[c.server.index].Filter, parsed) {
-							_ = c.Send(data.Data)
-							c.stats.SentPackets += 1
-						}
+					if Filter(Listeners[c.server.index].Filter, data.Data) {
+						_ = c.Send(data.Data.Raw)
+						c.stats.SentPackets += 1
 					}
 				} else {
 					if c.filter != "" {
-						// Parse APRS packet
-						parsed, err := parser.Parse(data.Data)
-						if err == nil {
-							if Filter(c.filter, parsed) {
-								_ = c.Send(data.Data)
-								c.stats.SentPackets += 1
-							}
+						if Filter(c.filter, data.Data) {
+							_ = c.Send(data.Data.Raw)
+							c.stats.SentPackets += 1
 						}
 					}
 				}

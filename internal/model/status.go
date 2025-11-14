@@ -35,6 +35,7 @@ type ReturnUplink struct {
 	Last         time.Time       `json:"last"`
 	PacketRX     uint64          `json:"packetRX"`
 	PacketRXDup  uint64          `json:"packetRXDup"`
+	PacketRXErr  uint64          `json:"packetRXErr"`
 	PacketRXRate uint64          `json:"packetRXRate"`
 	PacketTX     uint64          `json:"packetTX"`
 	PacketTXRate uint64          `json:"packetTXRate"`
@@ -76,6 +77,8 @@ type ReturnClient struct {
 	Version      string    `json:"version"`
 	Filter       string    `json:"filter"`
 	PacketRX     uint64    `json:"packetRX"`
+	PacketRXDup  uint64    `json:"packetRXDup"`
+	PacketRXErr  uint64    `json:"packetRXErr"`
 	PacketRXRate uint64    `json:"packetRXRate"`
 	PacketTX     uint64    `json:"packetTX"`
 	PacketTXRate uint64    `json:"packetTXRate"`

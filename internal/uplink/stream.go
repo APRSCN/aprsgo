@@ -2,13 +2,15 @@ package uplink
 
 import (
 	"sync"
+
+	"github.com/APRSCN/aprsutils/parser"
 )
 
 var Stream *DataStream
 
 // StreamData is the basic struct for stream write
 type StreamData struct {
-	Data   string
+	Data   parser.Parsed
 	Writer string
 }
 
@@ -28,7 +30,7 @@ func NewDataStream(bufferSize int) *DataStream {
 }
 
 // Write data to Stream
-func (ds *DataStream) Write(data string, writer string) {
+func (ds *DataStream) Write(data parser.Parsed, writer string) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
