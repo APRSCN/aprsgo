@@ -57,6 +57,7 @@ func Status(c fiber.Ctx) error {
 			Uptime:       uplink.Client.Uptime(),
 			Last:         uplink.Last,
 			PacketRX:     uplink.Stats.ReceivedPackets,
+			PacketRXDup:  uplink.Stats.ReceivedDups,
 			PacketRXRate: uplink.Stats.RecvPacketRate,
 			PacketTX:     uplink.Stats.SentPackets,
 			PacketTXRate: uplink.Stats.SendPacketRate,

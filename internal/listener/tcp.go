@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
@@ -71,10 +70,10 @@ func updateAllRates() {
 	defer statsMutex.Unlock()
 
 	// Update global rates
-	currentSentPackets := atomic.LoadUint64(&globalStats.SentPackets)
-	currentReceivedPackets := atomic.LoadUint64(&globalStats.ReceivedPackets)
-	currentSentBytes := atomic.LoadUint64(&globalStats.SentBytes)
-	currentReceivedBytes := atomic.LoadUint64(&globalStats.ReceivedBytes)
+	currentSentPackets := globalStats.SentPackets
+	currentReceivedPackets := globalStats.ReceivedPackets
+	currentSentBytes := globalStats.SentBytes
+	currentReceivedBytes := globalStats.ReceivedBytes
 
 	globalStats.SendPacketRate = currentSentPackets - globalStats.LastSentPackets
 	globalStats.RecvPacketRate = currentReceivedPackets - globalStats.LastReceivedPackets
@@ -298,9 +297,9 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 
 		// Update statistics for received data
 		packetSize := uint64(len(line))
-		atomic.AddUint64(&c.stats.ReceivedBytes, packetSize)
-		atomic.AddUint64(&s.stats.ReceivedBytes, packetSize)
-		atomic.AddUint64(&globalStats.ReceivedBytes, packetSize)
+		c.stats.ReceivedBytes += packetSize
+		s.stats.ReceivedBytes += packetSize
+		globalStats.ReceivedBytes += packetSize
 
 		// Process received data
 		s.processPacket(c, line)
@@ -318,9 +317,9 @@ func (s *TCPAPRSServer) processPacket(c *TCPAPRSClient, packet string) {
 		s.handleAPRSData(c, packet)
 
 		// Update statistics for received data
-		atomic.AddUint64(&c.stats.ReceivedPackets, 1)
-		atomic.AddUint64(&s.stats.ReceivedPackets, 1)
-		atomic.AddUint64(&globalStats.ReceivedPackets, 1)
+		c.stats.ReceivedPackets += 1
+		s.stats.ReceivedPackets += 1
+		globalStats.ReceivedPackets += 1
 	} else {
 		_ = c.Send("# invalid packet")
 	}
@@ -381,13 +380,15 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 	// Check passcode
 	if aprsutils.Passcode(callSign) == intPasscode {
 		client.mu.Lock()
+
 		client.callSign = callSign
 		client.verified = true
 		Clients[client].Verified = true
-		client.mu.Unlock()
 
 		_ = client.Send(fmt.Sprintf("# logresp %s verified, server %s", callSign, config.C.GetString("server.id")))
 		logger.L.Debug(fmt.Sprintf("OnlineClient logged in as %s", callSign), zap.String("client", client.conn.RemoteAddr().String()))
+
+		client.mu.Unlock()
 	} else {
 		_ = client.Send(fmt.Sprintf("# logresp %s unverified, server %s", callSign, config.C.GetString("server.id")))
 	}
@@ -423,7 +424,7 @@ func (c *TCPAPRSClient) handleUplinkData() {
 			switch c.mode {
 			case client.Fullfeed:
 				_ = c.Send(data.Data)
-				atomic.AddUint64(&c.stats.SentPackets, 1)
+				c.stats.SentPackets += 1
 			case client.IGate:
 				if len(Listeners) > c.server.index && Listeners[c.server.index].Filter != "" {
 					// Parse APRS packet
@@ -431,7 +432,7 @@ func (c *TCPAPRSClient) handleUplinkData() {
 					if err == nil {
 						if Filter(Listeners[c.server.index].Filter, parsed) {
 							_ = c.Send(data.Data)
-							atomic.AddUint64(&c.stats.SentPackets, 1)
+							c.stats.SentPackets += 1
 						}
 					}
 				} else {
@@ -441,7 +442,7 @@ func (c *TCPAPRSClient) handleUplinkData() {
 						if err == nil {
 							if Filter(c.filter, parsed) {
 								_ = c.Send(data.Data)
-								atomic.AddUint64(&c.stats.SentPackets, 1)
+								c.stats.SentPackets += 1
 							}
 						}
 					}
@@ -463,7 +464,7 @@ func (c *TCPAPRSClient) Send(data string) error {
 	if err == nil {
 		// Update send statistics
 		packetSize := uint64(len(data))
-		atomic.AddUint64(&c.stats.SentBytes, packetSize)
+		c.stats.SentBytes += packetSize
 		c.server.UpdateServerSendStats(1, packetSize)
 	}
 	return err
@@ -519,8 +520,8 @@ func (s *TCPAPRSServer) ClientCount() int {
 
 // UpdateServerSendStats updates server send statistics (called when sending data to clients)
 func (s *TCPAPRSServer) UpdateServerSendStats(packets uint64, bytes uint64) {
-	atomic.AddUint64(&s.stats.SentPackets, packets)
-	atomic.AddUint64(&s.stats.SentBytes, bytes)
-	atomic.AddUint64(&globalStats.SentPackets, packets)
-	atomic.AddUint64(&globalStats.SentBytes, bytes)
+	s.stats.SentPackets += packets
+	s.stats.SentBytes += bytes
+	globalStats.SentPackets += packets
+	globalStats.SentBytes += bytes
 }

@@ -2,17 +2,18 @@ package model
 
 // Statistics holds all statistics data
 type Statistics struct {
-	// OnlineClient statistics
-	SentPackets     uint64 `json:"sentPackets"`     // Total packets sent to client
-	ReceivedPackets uint64 `json:"receivedPackets"` // Total packets received from client
-	SentBytes       uint64 `json:"sentBytes"`       // Total bytes sent to client
-	ReceivedBytes   uint64 `json:"receivedBytes"`   // Total bytes received from client
+	SentPackets     uint64 `json:"sentPackets"`
+	ReceivedPackets uint64 `json:"receivedPackets"`
+	ReceivedDups    uint64 `json:"receivedDups"`
+	ReceivedErrors  uint64 `json:"receivedErrors"`
+	SentBytes       uint64 `json:"sentBytes"`
+	ReceivedBytes   uint64 `json:"receivedBytes"`
 
 	// Rates (packets per second)
-	SendPacketRate uint64 `json:"sendPacketRate"` // Current send packet rate
-	RecvPacketRate uint64 `json:"recvPacketRate"` // Current receive packet rate
-	SendByteRate   uint64 `json:"sendByteRate"`   // Current send byte rate
-	RecvByteRate   uint64 `json:"recvByteRate"`   // Current receive byte rate
+	SendPacketRate uint64 `json:"sendPacketRate"`
+	RecvPacketRate uint64 `json:"recvPacketRate"`
+	SendByteRate   uint64 `json:"sendByteRate"`
+	RecvByteRate   uint64 `json:"recvByteRate"`
 
 	// Internal counters for rate calculation
 	LastSentPackets     uint64

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
+	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsutils/client"
@@ -18,11 +19,15 @@ var Stream *DataStream
 var Last time.Time
 var Stats = new(model.Statistics)
 var stop = false
+var dupRecords *historydb.DupRecord
 
 // InitUplink inits uplink daemon
 func InitUplink() {
 	// Init Stream
 	Stream = NewDataStream(100)
+
+	// Init dupRecords
+	dupRecords = historydb.NewDup()
 
 	// Add config change trigger
 	config.OnChange = append(config.OnChange, func() {
@@ -69,7 +74,7 @@ func selectUplink() {
 				client.WithSoftwareAndVersion(
 					fmt.Sprintf("%s-%s", config.ENName, config.Nickname), config.Version,
 				),
-				client.WithHandler(packetHandler),
+				client.WithHandler(recvHandler),
 			)
 			// Connect client
 			err = Client.Connect()
@@ -79,7 +84,7 @@ func selectUplink() {
 
 			// Subscribe for uplink
 			ch, closeFn := Stream.Subscribe()
-			go sender(ch)
+			go sendHandler(ch)
 
 			// Waiting
 			Client.Wait()

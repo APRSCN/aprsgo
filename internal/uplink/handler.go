@@ -1,13 +1,28 @@
 package uplink
 
 import (
+	"hash/fnv"
 	"time"
 )
 
-// packetHandler is the packet handler of uplink
-func packetHandler(packet string) {
+// recvHandler is the packet handler of uplink
+func recvHandler(packet string) {
 	// Get time now
 	now := time.Now()
+
+	// Hash the data (dup check)
+	h64 := fnv.New64a()
+	_, err := h64.Write([]byte(packet))
+	if err == nil {
+		hash64 := h64.Sum64()
+
+		if dupRecords.Contain(hash64) {
+			return
+		}
+
+		go dupRecords.Record(hash64, float64(now.UnixNano())/1e9)
+		go dupRecords.Clear(1)
+	}
 
 	// Write packet to stream
 	Stream.Write(packet, "uplink")
@@ -19,8 +34,8 @@ func packetHandler(packet string) {
 	Stats.ReceivedPackets++
 }
 
-// sender sends data to uplink
-func sender(dataCh <-chan StreamData) {
+// sendHandler sends data to uplink
+func sendHandler(dataCh <-chan StreamData) {
 	for data := range dataCh {
 		if data.Writer != "uplink" {
 			// Get time now
