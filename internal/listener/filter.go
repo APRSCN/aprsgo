@@ -124,7 +124,7 @@ func matchRangeFilter(params []string, packet parser.Parsed) bool {
 	}
 
 	// Calculate distance using Haversine formula
-	distance := aprsutils.CalculateDistance(lat, lon, packet.Lat, packet.Lon)
+	distance := aprsutils.CalculateDistanceHaversine(lat, lon, packet.Lat, packet.Lon)
 	return distance <= dist
 }
 

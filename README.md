@@ -1,5 +1,5 @@
 # APRSGO
-An APRS core server with Golang
+An APRS-IS server with Go
 
 We are still under development. Welcome to contribute!
 
