@@ -11,10 +11,10 @@ import (
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
-	"go.uber.org/zap"
 )
 
 var Status model.SystemStatus
+var StatsMemory *historydb.MapFloat64History
 
 // Daemon is the system daemon
 func Daemon() {
@@ -80,29 +80,22 @@ func Daemon() {
 
 		if now.Sub(lastHistoryDBRecord) >= time.Minute {
 			// Record new data
-			for {
-				err := historydb.RecordDataPoint("stats.memory", [2]any{
-					float64(now.UnixNano()) / 1e9,
-					Status.Memory.Self,
-				})
-				if err != nil {
-					continue
-				}
-				lastHistoryDBRecord = now
-				break
-			}
+			StatsMemory.Record(float64(now.UnixNano())/1e9, Status.Memory.Self)
 
-			// Clear expired data
-			err := historydb.ClearDataSlice("stats.memory", 30*24*60*60)
-			if err != nil {
-				logger.L.Warn("Failed to clear data points for stats.memory", zap.Error(err))
-			}
+			// ClearByValue expired data
+			StatsMemory.ClearByKey(30 * 24 * 60 * 60)
+
+			lastHistoryDBRecord = time.Now()
 		}
 	}
 }
 
 // InitSystem inits system daemon
 func InitSystem() {
+	// Init stats
+	StatsMemory = historydb.NewMapFloat64History()
+
+	// Start daemon
 	go Daemon()
 
 	logger.L.Debug("System daemon initialized")

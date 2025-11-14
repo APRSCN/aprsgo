@@ -4,6 +4,8 @@ import (
 	"sync"
 )
 
+var Stream *DataStream
+
 // StreamData is the basic struct for stream write
 type StreamData struct {
 	Data   string

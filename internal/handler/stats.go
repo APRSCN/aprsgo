@@ -1,8 +1,9 @@
 package handler
 
 import (
-	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/model"
+	"github.com/APRSCN/aprsgo/internal/system"
+	"github.com/APRSCN/aprsgo/internal/uplink"
 	"github.com/gofiber/fiber/v3"
 )
 
@@ -11,37 +12,20 @@ func Stats(c fiber.Ctx) error {
 	// Get stats from DB
 	stats := model.StatsReturn{}
 	for {
-		var err error
-
 		// Get memory
-		stats.Memory, err = historydb.GetDataSlice("stats.memory")
-		if err != nil {
-			continue
-		}
+		stats.Memory = system.StatsMemory.ToSlice()
 
 		// Get uplink packet rx
-		stats.UplinkPacketRX, err = historydb.GetDataSlice("stats.uplink.packet.rx")
-		if err != nil {
-			continue
-		}
+		stats.UplinkPacketRX = uplink.StatsPacketRX.ToSlice()
 
 		// Get uplink packet tx
-		stats.UplinkPacketTX, err = historydb.GetDataSlice("stats.uplink.packet.tx")
-		if err != nil {
-			continue
-		}
+		stats.UplinkPacketTX = uplink.StatsPacketTX.ToSlice()
 
 		// Get uplink bytes rx
-		stats.UplinkBytesRX, err = historydb.GetDataSlice("stats.uplink.bytes.rx")
-		if err != nil {
-			continue
-		}
+		stats.UplinkBytesRX = uplink.StatsBytesRX.ToSlice()
 
 		// Get uplink bytes tx
-		stats.UplinkBytesTX, err = historydb.GetDataSlice("stats.uplink.bytes.tx")
-		if err != nil {
-			continue
-		}
+		stats.UplinkBytesTX = uplink.StatsBytesTX.ToSlice()
 
 		break
 	}

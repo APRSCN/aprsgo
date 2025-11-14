@@ -3,7 +3,11 @@ package uplink
 import (
 	"hash/fnv"
 	"time"
+
+	"github.com/APRSCN/aprsgo/internal/historydb"
 )
+
+var dupRecords *historydb.MapFloat64History
 
 // recvHandler is the packet handler of uplink
 func recvHandler(packet string) {
@@ -21,7 +25,7 @@ func recvHandler(packet string) {
 		}
 
 		go dupRecords.Record(hash64, float64(now.UnixNano())/1e9)
-		go dupRecords.Clear(1)
+		go dupRecords.ClearByValue(1)
 	}
 
 	// Write packet to stream

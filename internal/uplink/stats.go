@@ -4,9 +4,11 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/historydb"
-	"github.com/APRSCN/aprsgo/internal/logger"
-	"go.uber.org/zap"
+	"github.com/APRSCN/aprsgo/internal/model"
 )
+
+var Stats = new(model.Statistics)
+var Last time.Time
 
 // rate is the daemon to refresh rate
 func rate() {
@@ -29,6 +31,11 @@ func rate() {
 	}
 }
 
+var StatsPacketRX *historydb.MapFloat64History
+var StatsPacketTX *historydb.MapFloat64History
+var StatsBytesRX *historydb.MapFloat64History
+var StatsBytesTX *historydb.MapFloat64History
+
 // stats is the daemon to record stats data
 func stats() {
 	ticker := time.NewTicker(1 * time.Minute)
@@ -40,40 +47,20 @@ func stats() {
 			now := time.Now()
 
 			// Record packet rx rate
-			err := historydb.RecordDataPoint("stats.uplink.packet.rx", [2]any{
-				float64(now.UnixNano()) / 1e9,
-				Stats.RecvPacketRate,
-			})
-			if err != nil {
-				logger.L.Warn("Failed to record stats.uplink.packet.rx", zap.Error(err))
-			}
+			StatsPacketRX.Record(float64(now.UnixNano())/1e9, float64(Stats.RecvPacketRate))
+			StatsPacketRX.ClearByKey(30 * 24 * 60 * 60)
 
 			// Record bytes rx rate
-			err = historydb.RecordDataPoint("stats.uplink.bytes.rx", [2]any{
-				float64(now.UnixNano()) / 1e9,
-				Client.GetStats().CurrentRecvRate,
-			})
-			if err != nil {
-				logger.L.Warn("Failed to record stats.uplink.bytes.rx", zap.Error(err))
-			}
+			StatsBytesRX.Record(float64(now.UnixNano())/1e9, float64(Client.GetStats().CurrentRecvRate))
+			StatsBytesRX.ClearByKey(30 * 24 * 60 * 60)
 
 			// Record packet tx rate
-			err = historydb.RecordDataPoint("stats.uplink.packet.tx", [2]any{
-				float64(now.UnixNano()) / 1e9,
-				Stats.SendPacketRate,
-			})
-			if err != nil {
-				logger.L.Warn("Failed to record stats.uplink.packet.tx", zap.Error(err))
-			}
+			StatsPacketTX.Record(float64(now.UnixNano())/1e9, float64(Stats.SendPacketRate))
+			StatsPacketTX.ClearByKey(30 * 24 * 60 * 60)
 
 			// Record bytes tx rate
-			err = historydb.RecordDataPoint("stats.uplink.bytes.tx", [2]any{
-				float64(now.UnixNano()) / 1e9,
-				Client.GetStats().CurrentSentRate,
-			})
-			if err != nil {
-				logger.L.Warn("Failed to record stats.uplink.bytes.tx", zap.Error(err))
-			}
+			StatsBytesTX.Record(float64(now.UnixNano())/1e9, float64(Client.GetStats().CurrentSentRate))
+			StatsPacketTX.ClearByKey(30 * 24 * 60 * 60)
 		}
 	}
 }

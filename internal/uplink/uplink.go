@@ -3,7 +3,6 @@ package uplink
 import (
 	"fmt"
 	"strconv"
-	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/historydb"
@@ -15,11 +14,7 @@ import (
 )
 
 var Client *client.Client
-var Stream *DataStream
-var Last time.Time
-var Stats = new(model.Statistics)
 var stop = false
-var dupRecords *historydb.DupRecord
 
 // InitUplink inits uplink daemon
 func InitUplink() {
@@ -27,7 +22,13 @@ func InitUplink() {
 	Stream = NewDataStream(100)
 
 	// Init dupRecords
-	dupRecords = historydb.NewDup()
+	dupRecords = historydb.NewMapFloat64History()
+
+	// Init stats
+	StatsPacketRX = historydb.NewMapFloat64History()
+	StatsPacketTX = historydb.NewMapFloat64History()
+	StatsBytesRX = historydb.NewMapFloat64History()
+	StatsBytesTX = historydb.NewMapFloat64History()
 
 	// Add config change trigger
 	config.OnChange = append(config.OnChange, func() {
