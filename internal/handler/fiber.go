@@ -9,7 +9,6 @@ import (
 	"github.com/APRSCN/aprsgo/internal/middleware"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/ghinknet/json"
-
 	"github.com/go-playground/validator/v10"
 	fiberzap "github.com/gofiber/contrib/v3/zap"
 	"github.com/gofiber/fiber/v3"
@@ -47,6 +46,21 @@ func fiberAPP() *fiber.App {
 		Generator: utils.UUIDv4,
 	}))
 
+	// Use customer header middleware
+	app.Use(middleware.CustomHeader)
+
+	// Status info handler
+	app.Get("/status", Status)
+
+	// Stats info handler
+	app.Get("/stats", Stats)
+
+	// Favicon
+	app.Get("/favicon.ico", favicon)
+
+	// Logo
+	app.Get("/logo.svg", logo)
+
 	// Use global logger
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.L,
@@ -58,14 +72,8 @@ func fiberAPP() *fiber.App {
 		},
 	}))
 
-	// Use customer header middleware
-	app.Use(middleware.CustomHeader)
-
-	// Status info handler
-	app.All("/status", Status)
-
-	// Stats info handler
-	app.All("/stats", Stats)
+	// Static service
+	app.Get("/", index)
 
 	// Not found router handler
 	app.Use(func(c fiber.Ctx) error {
@@ -93,7 +101,7 @@ func RunHTTPServer() {
 		logger.L.Fatal(server.ListenAndServe().Error())
 	}()
 
-	if config.C.GetBool("debug") {
+	if config.Debug {
 		host := config.C.GetString("server.status.host")
 		if host == "" {
 			host = "[::]"

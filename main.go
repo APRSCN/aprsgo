@@ -8,11 +8,14 @@ import (
 	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/APRSCN/aprsgo/internal/system"
 	"github.com/APRSCN/aprsgo/internal/uplink"
-	
+
 	"go.uber.org/zap"
 )
 
 func main() {
+	// Init embed
+	InitEmbed()
+
 	// Load static config
 	config.LoadStatic()
 

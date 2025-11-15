@@ -15,7 +15,7 @@ var L *zap.Logger
 func InitLogger() {
 	// Set log level
 	var level zapcore.Level
-	if config.C.GetBool("debug") {
+	if config.Debug {
 		level = zap.DebugLevel
 	} else {
 		level = zap.InfoLevel

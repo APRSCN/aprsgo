@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -10,6 +11,7 @@ import (
 var C *viper.Viper
 var OnChange []func()
 var lastLoad time.Time
+var Debug = false
 
 // staticConfig is constructor of static config
 func staticConfig() *viper.Viper {
@@ -31,9 +33,12 @@ func staticConfig() *viper.Viper {
 		panic(err)
 	}
 
-	if cfg.GetBool("debug") {
+	if _, err = os.Stat("config_debug.yaml"); err == nil {
 		// Init config file
 		cfg.SetConfigName("config_debug")
+
+		// Set debug status
+		Debug = true
 
 		// Read the debug config file
 		err = cfg.ReadInConfig()

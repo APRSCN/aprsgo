@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APRSGo Status</title>
+    <link rel="icon" href="favicon.ico">
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif;
+            background-color: #f5f7fa;
+            color: #606266;
+        }
+        .container {
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .logo-section {
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+        }
+        .server-info {
+            flex-grow: 1;
+        }
+        .error-message {
+            color: #f56c6c;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            border: 1px solid #ebeef5;
+            background-color: #fff;
+        }
+        .card-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid #ebeef5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .card-body {
+            padding: 20px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            color: #303133;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .graph-container {
+            height: 230px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .graph-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .graph-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .graph-type-btn {
+            padding: 6px 12px;
+            border: 1px solid #dcdfe6;
+            border-radius: 4px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        .graph-type-btn.active {
+            background: #409eff;
+            color: white;
+            border-color: #409eff;
+        }
+        .graph-type-btn:hover {
+            border-color: #c6e2ff;
+            background-color: #ecf5ff;
+        }
+        .graph-type-btn.active:hover {
+            background: #66b1ff;
+            border-color: #66b1ff;
+        }
+        .motd {
+            background-color: #f0f9ff;
+            border-left: 4px solid #409eff;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .link {
+            color: #409eff;
+            cursor: pointer;
+        }
+        .rate-cell {
+            color: #909399;
+            font-size: 12px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-up {
+            background-color: #67c23a;
+        }
+        .status-down {
+            background-color: #f56c6c;
+        }
+        /* Optimized table styles */
+        .optimized-table .el-table__header-wrapper th,
+        .optimized-table .el-table__body-wrapper td {
+            padding: 10px 8px;
+            font-size: 13px;
+        }
+        .optimized-table .el-table__header .cell {
+            white-space: normal !important;
+            line-height: 1.4;
+            word-break: break-word;
+        }
+        .optimized-table .el-table__body .cell {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .table-legend {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #909399;
+        }
+        .table-legend span {
+            margin-right: 15px;
+        }
+        /* Memory table styles */
+        .memory-table .el-table__header-wrapper th,
+        .memory-table .el-table__body-wrapper td {
+            padding: 10px 8px;
+        }
+        .memory-table .el-table__header .cell,
+        .memory-table .el-table__body .cell {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* Header tooltip styles */
+        .header-tooltip {
+            cursor: help;
+            border-bottom: 1px dotted #909399;
+        }
+        /* Language switcher dropdown styles */
+        .language-switcher {
+            margin-left: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .lang-select {
+            width: 120px;
+        }
+        .client-link {
+            color: #66b1ff;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .client-link:hover {
+            color: #66b1ff;
+            text-decoration: underline;
+        }
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .optimized-table .el-table__header-wrapper th,
+            .optimized-table .el-table__body-wrapper td {
+                padding: 8px 6px;
+                font-size: 12px;
+            }
+        }
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .logo-section {
+                margin-bottom: 15px;
+            }
+            .graph-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            .graph-selector {
+                margin-top: 10px;
+            }
+            .language-switcher {
+                margin-left: 0;
+                margin-top: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="container">
+        <!-- Header section -->
+        <div class="header">
+            <div class="logo-section">
+                <img src="logo.svg" alt="Logo" width="200" />
+                <div class="server-info">
+                    <h2>{{ $t('APRSGo_STATUS_TITLE', { server: status.server?.id || 'Server' }) }}</h2>
+                    <p>{{ status.server?.now ? formatDateTime(status.server.now) : '' }}</p>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <div v-if="uiError" class="error-message">
+                    <h3>{{ uiError }}</h3>
+                </div>
+                <div class="language-switcher">
+                    <el-select
+                            v-model="currentLanguage"
+                            @change="switchLanguage"
+                            class="lang-select"
+                            size="small"
+                            placeholder="Select Language">
+                        <el-option
+                                v-for="lang in languageOptions"
+                                :key="lang.value"
+                                :label="lang.label"
+                                :value="lang.value">
+                        </el-option>
+                    </el-select>
+                </div>
+            </div>
+        </div>
+
+        <!-- MOTD section -->
+        <div v-if="motd" class="motd" v-html="motd"></div>
+
+        <!-- Statistics chart section -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="section-title">{{ $t('STATISTICS_TITLE') }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="graph-controls">
+                    <div class="graph-selector">
+                        <button
+                                v-for="type in graphTypes"
+                                :key="type.value"
+                                :class="['graph-type-btn', { active: currentGraphType === type.value }]"
+                                @click="switchGraphType(type.value)"
+                        >
+                            {{ type.label }}
+                        </button>
+                    </div>
+                </div>
+                <div class="graph-container" id="graph"></div>
+            </div>
+        </div>
+
+        <!-- Server information section -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="section-title">{{ $t('SERVER_TITLE') }}</h3>
+            </div>
+            <div class="card-body">
+                <el-table :data="serverInfo" size="small" :show-header="false">
+                    <el-table-column prop="name" width="180"></el-table-column>
+                    <el-table-column prop="value" align="right"></el-table-column>
+                </el-table>
+            </div>
+        </div>
+
+        <!-- Uplink card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="section-title">
+                    {{ $t('UPLINK_TITLE') }}
+                    <span class="status-indicator" :class="uplinkStatusClass"></span>
+                    {{ uplinkStatusText }}
+                </h3>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <el-table :data="uplinkData" size="small" :show-header="false">
+                        <el-table-column>
+                            <template #default="scope">
+                                <span>{{ $t('UPLINK_' + scope.row.key) }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="value" align="right">
+                            <template #default="scope">
+                                <span v-if="scope.row.key === 'HOST'">
+                                    <a :href="generateUplinkLink(scope.row.value)" target="_blank" class="client-link">{{ scope.row.value }}</a>
+                                </span>
+                                <span v-else>{{ scope.row.value }}</span>
+                            </template>
+                        </el-table-column>
+                        <el-table-column align="right" width="80">
+                            <template #default="scope">
+                                <span class="rate-cell" v-if="scope.row.rate !== undefined">{{ scope.row.rate || 0 }}/s</span>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Listeners card -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="section-title">{{ $t('LISTENERS_TITLE') }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <el-table
+                            :data="listenersData"
+                            size="small"
+                            class="optimized-table"
+                            :default-sort = "{prop: 'name', order: 'ascending'}"
+                            stripe>
+                        <el-table-column
+                                v-for="col in columns.listener"
+                                :key="col.key"
+                                :prop="col.prop || col.key"
+                                :label="$t('TH_' + col.key)"
+                                :width="col.width"
+                                :sortable="col.sortable">
+                            <template #header="{ column }">
+                                <el-tooltip
+                                        v-if="col.tooltip"
+                                        effect="dark"
+                                        :content="col.tooltip"
+                                        placement="top">
+                                    <span class="header-tooltip">{{ $t('TH_' + col.key) }}</span>
+                                </el-tooltip>
+                                <span v-else>{{ $t('TH_' + col.key) }}</span>
+                            </template>
+                            <template #default="scope">
+                                <span v-if="col.key === 'packets_rx'"
+                                      :class="getPktsRxClass(scope.row)"
+                                      @click="showPktsRxDialog(scope.row)">
+                                    {{ scope.row.packets_rx }}
+                                </span>
+                                <span v-else-if="col.key === 'rate'">
+                                    {{ scope.row.rate }}
+                                </span>
+                                <span v-else-if="col.key === 'bytes_rate'">
+                                    {{ scope.row.bytes_rate }}
+                                </span>
+                                <span v-else>{{ scope.row[col.key] }}</span>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="table-legend">
+                        <span>{{ $t('LEGEND_PACKETS_RX') }}</span>
+                        <span>{{ $t('LEGEND_RATE') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clients table -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="section-title">{{ $t('CLIENTS_TITLE') }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <el-table
+                            :data="sortedClients"
+                            size="small"
+                            class="optimized-table"
+                            stripe
+                            @sort-change="handleClientSort">
+                        <el-table-column
+                                v-for="col in columns.clients"
+                                :key="col.key"
+                                :prop="col.prop || col.key"
+                                :label="$t('TH_' + col.key)"
+                                :sortable="col.sortable"
+                                :width="col.width">
+                            <template #header="{ column }">
+                                <el-tooltip
+                                        v-if="col.tooltip"
+                                        effect="dark"
+                                        :content="col.tooltip"
+                                        placement="top">
+                                    <span class="header-tooltip">{{ $t('TH_' + col.key) }}</span>
+                                </el-tooltip>
+                                <span v-else>{{ $t('TH_' + col.key) }}</span>
+                            </template>
+                            <template #default="scope">
+                                <span v-if="col.key === 'id'">
+                            <a :href="generateClientLink(scope.row)" target="_blank" class="client-link">{{ scope.row.id }}</a>
+                        </span>
+                                <span v-else-if="col.key === 'verified'">
+                            <span v-if="scope.row.verified" style="color: #67c23a">{{ $t('YES') }}</span>
+                            <span v-else style="color: #f56c6c">{{ $t('NO') }}</span>
+                        </span>
+                                <span v-else-if="col.key === 'packets_rx'"
+                                      :class="getPktsRxClass(scope.row)"
+                                      @click="showPktsRxDialog(scope.row)">
+                            {{ scope.row.packets_rx }}
+                        </span>
+                                <span v-else-if="col.key === 'rate'">
+                            {{ scope.row.rate }}
+                        </span>
+                                <span v-else-if="col.key === 'bytes_rate'">
+                            {{ scope.row.bytes_rate }}
+                        </span>
+                                <span v-else-if="col.key === 'software'">
+                            {{ scope.row.software }}
+                        </span>
+                                <span v-else>{{ scope.row[col.key] }}</span>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <div class="table-legend">
+                        <span>{{ $t('LEGEND_PACKETS_RX') }}</span>
+                        <span>{{ $t('LEGEND_RATE') }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Memory information table -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="section-title">{{ $t('MEM_TITLE') }}</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <el-table :data="memoryData" size="small" class="memory-table">
+                        <el-table-column :label="$t('MEM_TH_TYPE')" prop="type" align="left"></el-table-column>
+                        <el-table-column :label="$t('MEM_TH_value')" prop="value" align="right"></el-table-column>
+                        <el-table-column :label="$t('MEM_TH_unit')" prop="unit" align="right" width="80"></el-table-column>
+                    </el-table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Packet receive errors dialog -->
+    <el-dialog
+            v-model="pktsRxDialogVisible"
+            :title="$t('RXERR_DIALOG_TITLE', { username: selectedConnection?.id || '' })"
+            width="500px">
+        <p>{{ $t('RXERR_DIALOG_MESSAGE', { username: selectedConnection?.id || '' }) }}</p>
+        <p>
+                <span v-if="selectedConnection?.packetRXDup > 0">
+                    {{ $t('RXERR_DUPLICATE') }}: {{ selectedConnection?.packetRXDup || 0 }}<br>
+                </span>
+            <span v-if="selectedConnection?.packetRXErr > 0">
+                    {{ $t('RXERR_PACKET') }}: {{ selectedConnection?.packetRXErr || 0 }}<br>
+                </span>
+        </p>
+        <template #footer>
+            <el-button @click="pktsRxDialogVisible = false">{{ $t('CLOSE') }}</el-button>
+        </template>
+    </el-dialog>
+</div>
+
+<!-- Include Vue 3, Element Plus and axios -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/element-plus"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/vue-i18n@9"></script>
+
+<script>
+    const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
+    const { ElMessage, ElTooltip } = ElementPlus;
+
+    // Internationalization configuration
+    const messages = {
+        en: {
+            APRSGo_STATUS_TITLE: 'APRSGo Status - {server}',
+            SERVER_TITLE: 'Server Information',
+            STATISTICS_TITLE: 'Statistics',
+            TOTALS_TITLE: 'Totals',
+            UPLINK_TITLE: 'Uplink',
+            LISTENERS_TITLE: 'Listeners',
+            CLIENTS_TITLE: 'Clients',
+            MEM_TITLE: 'Memory Information',
+            SERVER_SERVER_ID: 'Server ID',
+            SERVER_SERVER_ADMIN: 'Server Admin',
+            SERVER_EMAIL: 'Email',
+            SERVER_SOFTWARE: 'Software',
+            SERVER_VERSION: 'Version',
+            SERVER_OS: 'Operating System',
+            SERVER_ARCH: 'Architecture',
+            SERVER_UPTIME: 'Uptime',
+            SERVER_MODEL: 'CPU Model',
+            SERVER_CPU_USAGE: 'CPU Usage',
+            TOTALS_clients: 'Clients',
+            TOTALS_listeners: 'Listeners',
+            TOTALS_packets: 'Packets',
+            UPLINK_ID: 'Uplink ID',
+            UPLINK_MODE: 'Mode',
+            UPLINK_PROTOCOL: 'Protocol',
+            UPLINK_HOST: 'Host',
+            UPLINK_SERVER: 'Server',
+            UPLINK_STATUS: 'Status',
+            UPLINK_UPTIME: 'Uptime',
+            UPLINK_LAST_ACTIVITY: 'Last Activity',
+            UPLINK_PACKET_RX: 'Packets Received',
+            UPLINK_PACKET_TX: 'Packets Sent',
+            UPLINK_BYTES_RX: 'Bytes Received',
+            UPLINK_BYTES_TX: 'Bytes Sent',
+            TH_name: 'Name',
+            TH_mode: 'Mode',
+            TH_protocol: 'Protocol',
+            TH_address: 'Address',
+            TH_filter: 'Filter',
+            TH_onlineClient: 'Online Clients',
+            TH_peakClient: 'Peak Clients',
+            TH_packets_tx: 'Packets TX',
+            TH_packets_rx: 'Packets RX/DUP/ERR',
+            TH_bytes_tx: 'Bytes TX',
+            TH_bytes_rx: 'Bytes RX',
+            TH_rate: 'Packet Rate (TX/RX)',
+            TH_bytes_rate: 'Byte Rate (TX/RX)',
+            TH_id: 'Client ID',
+            TH_at: 'Listener',
+            TH_addr: 'Address',
+            TH_verified: 'Verified',
+            TH_uptime: 'Uptime',
+            TH_last: 'Last Activity',
+            TH_software: 'Software',
+            TH_filter: 'Filter',
+            MEM_TH_TYPE: 'Type',
+            MEM_TH_value: 'Value',
+            MEM_TH_unit: 'Unit',
+            // Memory information types
+            MEM_TOTAL: 'Total Memory',
+            MEM_USED: 'Used Memory',
+            MEM_SELF: 'Self Memory',
+            MEM_TOTAL_ALLOCATED: 'Total Allocated',
+            MEM_CURRENT_ALLOCATED: 'Current Allocated',
+            MEM_HEAP: 'Heap Memory',
+            MEM_MALLOC: 'Malloc Operations',
+            MEM_FREE: 'Free Operations',
+            MEM_GC_COUNT: 'GC Count',
+            MEM_GC_PAUSE_TOTAL: 'GC Pause Total',
+            RXERR_DIALOG_TITLE: 'Packet Receive Errors - {username}',
+            RXERR_DIALOG_MESSAGE: 'The following receive errors occurred for {username}:',
+            RXERR_PACKET: 'Packet Errors',
+            RXERR_DUPLICATE: 'Duplicate Packets',
+            CLOSE: 'Close',
+            STATUS_UP: 'Up',
+            STATUS_DOWN: 'Down',
+            YES: 'Yes',
+            NO: 'No',
+            LEGEND_PACKETS_RX: 'Packets RX: Received/Duplicate/Error',
+            LEGEND_RATE: 'Rate: TX/RX'
+        },
+        zh: {
+            APRSGo_STATUS_TITLE: 'APRSGo 状态 - {server}',
+            SERVER_TITLE: '服务器信息',
+            STATISTICS_TITLE: '统计信息',
+            TOTALS_TITLE: '总计',
+            UPLINK_TITLE: '上行链路',
+            LISTENERS_TITLE: '监听器',
+            CLIENTS_TITLE: '客户端',
+            MEM_TITLE: '内存信息',
+            SERVER_SERVER_ID: '服务器 ID',
+            SERVER_SERVER_ADMIN: '服务器管理员',
+            SERVER_EMAIL: '邮箱',
+            SERVER_SOFTWARE: '软件',
+            SERVER_VERSION: '版本',
+            SERVER_OS: '操作系统',
+            SERVER_ARCH: '架构',
+            SERVER_UPTIME: '运行时间',
+            SERVER_MODEL: 'CPU 型号',
+            SERVER_CPU_USAGE: 'CPU 使用率',
+            TOTALS_clients: '客户端',
+            TOTALS_listeners: '监听器',
+            TOTALS_packets: '数据包',
+            UPLINK_ID: '上行链路 ID',
+            UPLINK_MODE: '模式',
+            UPLINK_PROTOCOL: '协议',
+            UPLINK_HOST: '主机',
+            UPLINK_SERVER: '服务器',
+            UPLINK_STATUS: '状态',
+            UPLINK_UPTIME: '运行时间',
+            UPLINK_LAST_ACTIVITY: '最后活动',
+            UPLINK_PACKET_RX: '接收数据包',
+            UPLINK_PACKET_TX: '发送数据包',
+            UPLINK_BYTES_RX: '接收字节',
+            UPLINK_BYTES_TX: '发送字节',
+            TH_name: '名称',
+            TH_mode: '模式',
+            TH_protocol: '协议',
+            TH_address: '地址',
+            TH_filter: '过滤器',
+            TH_onlineClient: '在线客户端',
+            TH_peakClient: '峰值客户端',
+            TH_packets_tx: '发送数据包',
+            TH_packets_rx: '接收数据包/重复/错误',
+            TH_bytes_tx: '发送字节',
+            TH_bytes_rx: '接收字节',
+            TH_rate: '数据包速率 (发送/接收)',
+            TH_bytes_rate: '字节速率 (发送/接收)',
+            TH_id: '客户端 ID',
+            TH_at: '监听器',
+            TH_addr: '地址',
+            TH_verified: '已验证',
+            TH_uptime: '运行时间',
+            TH_last: '最后活动',
+            TH_software: '软件',
+            TH_filter: '过滤器',
+            MEM_TH_TYPE: '类型',
+            MEM_TH_value: '值',
+            MEM_TH_unit: '单位',
+            // Memory information types
+            MEM_TOTAL: '总内存',
+            MEM_USED: '已用内存',
+            MEM_SELF: '自身内存',
+            MEM_TOTAL_ALLOCATED: '总分配',
+            MEM_CURRENT_ALLOCATED: '当前分配',
+            MEM_HEAP: '堆内存',
+            MEM_MALLOC: '分配操作',
+            MEM_FREE: '释放操作',
+            MEM_GC_COUNT: '垃圾回收次数',
+            MEM_GC_PAUSE_TOTAL: '垃圾回收暂停总时间',
+            RXERR_DIALOG_TITLE: '数据包接收错误 - {username}',
+            RXERR_DIALOG_MESSAGE: '{username} 发生了以下接收错误：',
+            RXERR_PACKET: '数据包错误',
+            RXERR_DUPLICATE: '重复数据包',
+            CLOSE: '关闭',
+            STATUS_UP: '正常',
+            STATUS_DOWN: '异常',
+            YES: '是',
+            NO: '否',
+            LEGEND_PACKETS_RX: '数据包接收: 接收/重复/错误',
+            LEGEND_RATE: '速率: 发送/接收'
+        }
+    };
+
+    // Chart type labels also need internationalization
+    const graphTypeLabels = {
+        en: [
+            { value: 'uplinkPacketRX', label: 'Uplink Packets RX' },
+            { value: 'uplinkPacketTX', label: 'Uplink Packets TX' },
+            { value: 'uplinkBytesRX', label: 'Uplink Bytes RX' },
+            { value: 'uplinkBytesTX', label: 'Uplink Bytes TX' },
+            { value: 'memory', label: 'Memory Usage' }
+        ],
+        zh: [
+            { value: 'uplinkPacketRX', label: '上行链路接收数据包' },
+            { value: 'uplinkPacketTX', label: '上行链路发送数据包' },
+            { value: 'uplinkBytesRX', label: '上行链路接收字节' },
+            { value: 'uplinkBytesTX', label: '上行链路发送字节' },
+            { value: 'memory', label: '内存使用情况' }
+        ]
+    };
+
+    const i18n = VueI18n.createI18n({
+        locale: 'en',
+        messages
+    });
+
+    const app = createApp({
+        setup() {
+            // Reactive data
+            const status = ref({});
+            const stats = ref({});
+            const uiError = ref('');
+            const motd = ref('');
+            const graphData = ref([]);
+            const pktsRxDialogVisible = ref(false);
+            const selectedConnection = ref(null);
+            const clientSort = reactive({
+                column: 'id',
+                order: 'ascending'
+            });
+
+            // Language related
+            const currentLanguage = ref('en');
+            const graphTypes = ref(graphTypeLabels.en);
+            const languageOptions = ref([
+                { value: 'en', label: 'English' },
+                { value: 'zh', label: '中文' }
+            ]);
+
+            // Chart related
+            const currentGraphType = ref('uplinkPacketRX');
+
+            let chart = null;
+
+            // Table column definitions
+            const columns = {
+                listener: [
+                    { key: 'name', label: 'Name', width: 160, sortable: true },
+                    { key: 'mode', label: 'Mode', width: 100, sortable: true },
+                    { key: 'protocol', label: 'Protocol', width: 120, sortable: true },
+                    { key: 'address', label: 'Address', width: 180, sortable: true },
+                    { key: 'filter', label: 'Filter', width: 200, sortable: true },
+                    { key: 'onlineClient', label: 'Online Clients', width: 130, sortable: true, prop: '_onlineClient' },
+                    { key: 'peakClient', label: 'Peak Clients', width: 130, sortable: true, prop: '_peakClient' },
+                    { key: 'packets_tx', label: 'Packets TX', width: 120, sortable: true, prop: '_packetTX' },
+                    { key: 'packets_rx', label: 'Packets RX/DUP/ERR', width: 170, sortable: true,
+                        tooltip: 'Packets: Received / Duplicate / Error', prop: '_packetRX' },
+                    { key: 'bytes_tx', label: 'Bytes TX', width: 120, sortable: true, prop: '_bytesTX' },
+                    { key: 'bytes_rx', label: 'Bytes RX', width: 120, sortable: true, prop: '_bytesRX' },
+                    { key: 'rate', label: 'Packet Rate (TX/RX)', width: 160, sortable: true,
+                        tooltip: 'Packet Rate: Transmit / Receive', prop: '_packetTXRate' },
+                    { key: 'bytes_rate', label: 'Byte Rate (TX/RX)', width: 160, sortable: true,
+                        tooltip: 'Byte Rate: Transmit / Receive', prop: '_bytesTXRate' }
+                ],
+                clients: [
+                    { key: 'id', label: 'Client ID', width: 150, sortable: true },
+                    { key: 'at', label: 'Listener', width: 130, sortable: true },
+                    { key: 'addr', label: 'Address', width: 160, sortable: true },
+                    { key: 'verified', label: 'Verified', width: 110, sortable: true },
+                    { key: 'uptime', label: 'Uptime', width: 130, sortable: true },
+                    { key: 'last', label: 'Last Activity', width: 200, sortable: true },
+                    { key: 'software', label: 'Software', width: 200, sortable: true },
+                    { key: 'filter', label: 'Filter', width: 200, sortable: true },
+                    { key: 'packets_tx', label: 'Packets TX', width: 120, sortable: true, prop: '_packetTX' },
+                    { key: 'packets_rx', label: 'Packets RX/DUP/ERR', width: 170, sortable: true,
+                        tooltip: 'Packets: Received / Duplicate / Error', prop: '_packetRX' },
+                    { key: 'bytes_tx', label: 'Bytes TX', width: 120, sortable: true, prop: '_bytesTX' },
+                    { key: 'bytes_rx', label: 'Bytes RX', width: 120, sortable: true, prop: '_bytesRX' },
+                    { key: 'rate', label: 'Packet Rate (TX/RX)', width: 160, sortable: true,
+                        tooltip: 'Packet Rate: Transmit / Receive', prop: '_packetTXRate' },
+                    { key: 'bytes_rate', label: 'Byte Rate (TX/RX)', width: 160, sortable: true,
+                        tooltip: 'Byte Rate: Transmit / Receive', prop: '_bytesTXRate' }
+                ]
+            };
+
+            // Computed properties
+            const serverInfo = computed(() => {
+                if (!status.value.server) return [];
+
+                const server = status.value.server;
+                return [
+                    { name: i18n.global.t('SERVER_SERVER_ID'), value: server.id },
+                    { name: i18n.global.t('SERVER_SERVER_ADMIN'), value: server.admin },
+                    { name: i18n.global.t('SERVER_EMAIL'), value: server.email },
+                    { name: i18n.global.t('SERVER_SOFTWARE'), value: server.software },
+                    { name: i18n.global.t('SERVER_VERSION'), value: server.version },
+                    { name: i18n.global.t('SERVER_OS'), value: server.os },
+                    { name: i18n.global.t('SERVER_ARCH'), value: server.arch },
+                    { name: i18n.global.t('SERVER_UPTIME'), value: formatDuration(server.uptime) },
+                    { name: i18n.global.t('SERVER_MODEL'), value: server.model },
+                    { name: i18n.global.t('SERVER_CPU_USAGE'), value: (server.percent || 0).toFixed(2) + '%' }
+                ];
+            });
+
+            const uplinkData = computed(() => {
+                if (!status.value.uplink) return [];
+
+                const uplink = status.value.uplink;
+                return [
+                    { key: 'ID', value: uplink.id },
+                    { key: 'MODE', value: uplink.mode },
+                    { key: 'PROTOCOL', value: uplink.protocol },
+                    { key: 'HOST', value: `${uplink.host}:${uplink.port}` },
+                    { key: 'SERVER', value: uplink.server },
+                    { key: 'STATUS', value: uplink.up ? i18n.global.t('STATUS_UP') : i18n.global.t('STATUS_DOWN') },
+                    { key: 'UPTIME', value: formatDateTime(uplink.uptime) },
+                    { key: 'LAST_ACTIVITY', value: formatDateTime(uplink.last) },
+                    { key: 'PACKET_RX', value: uplink.packetRX, rate: uplink.packetRXRate },
+                    { key: 'PACKET_TX', value: uplink.packetTX, rate: uplink.packetTXRate },
+                    { key: 'BYTES_RX', value: formatBytes(uplink.bytesRX), rate: formatBytes(uplink.bytesRXRate) },
+                    { key: 'BYTES_TX', value: formatBytes(uplink.bytesTX), rate: formatBytes(uplink.bytesTXRate) }
+                ];
+            });
+
+            const uplinkStatusClass = computed(() => {
+                return status.value.uplink?.up ? 'status-up' : 'status-down';
+            });
+
+            const uplinkStatusText = computed(() => {
+                return status.value.uplink?.up ? i18n.global.t('STATUS_UP') : i18n.global.t('STATUS_DOWN');
+            });
+
+            const listenersData = computed(() => {
+                if (!status.value.listeners) return [];
+
+                return status.value.listeners.map(listener => ({
+                    name: listener.name,
+                    mode: listener.mode,
+                    protocol: listener.protocol,
+                    address: `${listener.host}:${listener.port}`,
+                    filter: listener.filter,
+                    onlineClient: listener.onlineClient,
+                    peakClient: listener.peakClient,
+                    packets_tx: listener.packetTX,
+                    packets_rx: `${listener.packetRX || 0}/${listener.packetRXDup || 0}/${listener.packetRXErr || 0}`,
+                    bytes_tx: formatBytes(listener.bytesTX),
+                    bytes_rx: formatBytes(listener.bytesRX),
+                    rate: `${listener.packetTXRate || 0} / ${listener.packetRXRate || 0}`,
+                    bytes_rate: `${formatBytes(listener.bytesTXRate || 0)} / ${formatBytes(listener.bytesRXRate || 0)}`,
+                    // Raw data for sorting and calculations
+                    _onlineClient: listener.onlineClient,
+                    _peakClient: listener.peakClient,
+                    _packetTX: listener.packetTX,
+                    _packetRX: listener.packetRX,
+                    _packetRXDup: listener.packetRXDup,
+                    _packetRXErr: listener.packetRXErr,
+                    _packetTXRate: listener.packetTXRate,
+                    _packetRXRate: listener.packetRXRate,
+                    _bytesTX: listener.bytesTX,
+                    _bytesRX: listener.bytesRX,
+                    _bytesTXRate: listener.bytesTXRate,
+                    _bytesRXRate: listener.bytesRXRate
+                }));
+            });
+
+            const clientsData = computed(() => {
+                if (!status.value.clients) return [];
+
+                return status.value.clients.map(client => ({
+                    id: client.id,
+                    at: client.at,
+                    addr: client.addr,
+                    verified: client.verified,
+                    uptime: formatDurationFromDate(client.uptime),
+                    last: formatDateTime(client.last),
+                    software: `${client.software} ${client.version}`,
+                    filter: client.filter,
+                    packets_tx: client.packetTX,
+                    packets_rx: `${client.packetRX || 0}/${client.packetRXDup || 0}/${client.packetRXErr || 0}`,
+                    bytes_tx: formatBytes(client.bytesTX),
+                    bytes_rx: formatBytes(client.bytesRX),
+                    rate: `${client.packetTXRate || 0} / ${client.packetRXRate || 0}`,
+                    bytes_rate: `${formatBytes(client.bytesTXRate || 0)} / ${formatBytes(client.bytesRXRate || 0)}`,
+                    // Raw data for sorting and calculations
+                    _packetTX: client.packetTX,
+                    _packetRX: client.packetRX,
+                    _packetRXDup: client.packetRXDup,
+                    _packetRXErr: client.packetRXErr,
+                    _packetTXRate: client.packetTXRate,
+                    _packetRXRate: client.packetRXRate,
+                    _bytesTX: client.bytesTX,
+                    _bytesRX: client.bytesRX,
+                    _bytesTXRate: client.bytesTXRate,
+                    _bytesRXRate: client.bytesRXRate
+                }));
+            });
+
+            const memoryData = computed(() => {
+                if (!status.value.server?.memory) return [];
+
+                const memory = status.value.server.memory;
+                return [
+                    { type: i18n.global.t('MEM_TOTAL'), value: (memory.total || 0).toFixed(2), unit: 'MB' },
+                    { type: i18n.global.t('MEM_USED'), value: (memory.used || 0).toFixed(2), unit: 'MB' },
+                    { type: i18n.global.t('MEM_SELF'), value: (memory.self || 0).toFixed(2), unit: 'MB' },
+                    { type: i18n.global.t('MEM_TOTAL_ALLOCATED'), value: (memory.totalAllocated || 0).toFixed(2), unit: 'MB' },
+                    { type: i18n.global.t('MEM_CURRENT_ALLOCATED'), value: (memory.currentAllocated || 0).toFixed(2), unit: 'MB' },
+                    { type: i18n.global.t('MEM_HEAP'), value: (memory.heap || 0).toFixed(2), unit: 'MB' },
+                    { type: i18n.global.t('MEM_MALLOC'), value: memory.malloc || 0, unit: '' },
+                    { type: i18n.global.t('MEM_FREE'), value: memory.free || 0, unit: '' },
+                    { type: i18n.global.t('MEM_GC_COUNT'), value: memory.numGC || 0, unit: '' },
+                    { type: i18n.global.t('MEM_GC_PAUSE_TOTAL'), value: (memory.pauseTotalSec || 0).toFixed(6), unit: 's' }
+                ];
+            });
+
+            const sortedClients = computed(() => {
+                if (!clientsData.value || clientsData.value.length === 0) return [];
+
+                const clients = [...clientsData.value];
+                const column = clientSort.column;
+                const order = clientSort.order;
+
+                clients.sort((a, b) => {
+                    let aVal = a[column];
+                    let bVal = b[column];
+
+                    // Handle numeric sorting
+                    if (typeof aVal === 'number' && typeof bVal === 'number') {
+                        return order === 'ascending' ? aVal - bVal : bVal - aVal;
+                    }
+
+                    // String sorting
+                    aVal = String(aVal || '');
+                    bVal = String(bVal || '');
+
+                    if (aVal < bVal) return order === 'ascending' ? -1 : 1;
+                    if (aVal > bVal) return order === 'ascending' ? 1 : -1;
+                    return 0;
+                });
+
+                return clients;
+            });
+
+            // Methods
+            const fetchStatus = async () => {
+                try {
+                    const response = await axios.get('/status');
+                    if (response.data.msg === 'success') {
+                        status.value = response.data;
+                        uiError.value = '';
+                    } else {
+                        uiError.value = 'Failed to fetch server status: ' + response.data.msg;
+                    }
+                    console.log('Fetching status...');
+                } catch (error) {
+                    console.error('Error fetching status:', error);
+                    uiError.value = 'Failed to fetch server status';
+                    ElMessage.error('Failed to fetch server status');
+                }
+            };
+
+            const fetchStats = async () => {
+                try {
+                    const response = await axios.get('/stats');
+                    stats.value = response.data;
+                    updateChart();
+                    console.log('Fetching stats...');
+                } catch (error) {
+                    console.error('Error fetching stats:', error);
+                }
+            };
+
+            const fetchMOTD = async () => {
+                // Assume MOTD is fetched from another endpoint
+                try {
+                    // const response = await axios.get('/motd');
+                    // motd.value = response.data;
+                    console.log('Fetching MOTD...');
+                } catch (error) {
+                    console.error('Error fetching MOTD:', error);
+                }
+            };
+
+            const formatDateTime = (timestamp) => {
+                if (!timestamp) return '';
+                return new Date(timestamp).toLocaleString();
+            };
+
+            const formatDuration = (seconds) => {
+                if (!seconds) return '';
+
+                const days = Math.floor(seconds / 86400);
+                const hours = Math.floor((seconds % 86400) / 3600);
+                const minutes = Math.floor((seconds % 3600) / 60);
+                const secs = Math.floor(seconds % 60);
+
+                if (days > 0) {
+                    return `${days}d ${hours}h ${minutes}m ${secs}s`;
+                } else if (hours > 0) {
+                    return `${hours}h ${minutes}m ${secs}s`;
+                } else if (minutes > 0) {
+                    return `${minutes}m ${secs}s`;
+                } else {
+                    return `${secs}s`;
+                }
+            };
+
+            const formatDurationFromDate = (dateString) => {
+                if (!dateString) return '';
+                const now = new Date();
+                const date = new Date(dateString);
+                const diff = (now - date) / 1000; // Convert to seconds
+                return formatDuration(diff);
+            };
+
+            const formatBytes = (bytes) => {
+                if (!bytes) return '0 B';
+
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+            };
+
+            const switchGraphType = (type) => {
+                currentGraphType.value = type;
+                updateChart();
+            };
+
+            const getPktsRxClass = (connection) => {
+                // Use raw data to calculate duplicate rate
+                const ratio = (connection._packetRXDup || 0) / (connection._packetRX || 1);
+                if (ratio > 0.1) return 'link';
+                return '';
+            };
+
+            const showPktsRxDialog = (connection) => {
+                selectedConnection.value = connection;
+                pktsRxDialogVisible.value = true;
+            };
+
+            const handleClientSort = ({ column, prop, order }) => {
+                if (prop) {
+                    clientSort.column = prop;
+                    clientSort.order = order || 'ascending';
+                }
+            };
+
+            // Generate client link based on software and language
+            const generateClientLink = (client) => {
+                // Check if client software contains specific keywords
+                const software = (client.software || '').toLowerCase();
+                const hasSpecialSoftware = software.includes('aprsc') ||
+                    software.includes('aprsgo') ||
+                    software.includes('javaprssrvr');
+
+                if (hasSpecialSoftware && client.addr) {
+                    // For special software, link to their 14501 port
+                    // Keep the original address format for IPv6 (with brackets)
+                    let host = client.addr;
+
+                    // Extract just the host part (remove port if present) but keep brackets for IPv6
+                    if (host.includes(']:')) {
+                        // IPv6 with port: [::1]:8080 -> [::1]
+                        host = host.substring(0, host.lastIndexOf(']:')) + ']';
+                    } else if (host.includes(':') && !host.startsWith('[')) {
+                        // IPv6 without brackets but with port: ::1:8080 -> ::1
+                        // Or IPv4 with port: 192.168.1.1:8080 -> 192.168.1.1
+                        const lastColonIndex = host.lastIndexOf(':');
+                        // Check if the part after last colon is a valid port number
+                        const potentialPort = host.substring(lastColonIndex + 1);
+                        if (/^\d+$/.test(potentialPort)) {
+                            host = host.substring(0, lastColonIndex);
+                        }
+                    }
+
+                    // If it's an IPv6 address without brackets, add them
+                    if (host.includes(':') && !host.startsWith('[')) {
+                        host = `[${host}]`;
+                    }
+
+                    return `http://${host}:14501`;
+                } else {
+                    // Choose link based on language
+                    if (currentLanguage.value === 'zh') {
+                        return `https://aprs.cn/callsign/${client.id}`;
+                    } else {
+                        return `https://aprs.fi/?call=${client.id}`;
+                    }
+                }
+            };
+
+            // Generate uplink host link to 14501 HTTP port
+            const generateUplinkLink = (hostWithPort) => {
+                if (!hostWithPort) return '#';
+
+                try {
+                    let host = hostWithPort;
+
+                    // Extract host part from host:port format
+                    if (hostWithPort.includes(']:')) {
+                        // IPv6 address format: [::1]:8080
+                        const bracketIndex = hostWithPort.lastIndexOf(']:');
+                        if (bracketIndex !== -1) {
+                            host = hostWithPort.substring(0, bracketIndex + 1); // Keep brackets for IPv6
+                        }
+                    } else if (hostWithPort.includes(':') && !hostWithPort.startsWith('[')) {
+                        // IPv4 address format: 192.168.1.1:8080 or IPv6 without brackets: ::1:8080
+                        const lastColonIndex = hostWithPort.lastIndexOf(':');
+                        const potentialPort = hostWithPort.substring(lastColonIndex + 1);
+                        if (/^\d+$/.test(potentialPort)) {
+                            host = hostWithPort.substring(0, lastColonIndex);
+                        }
+                    }
+
+                    // Add brackets for IPv6 addresses if missing
+                    if (host.includes(':') && !host.startsWith('[')) {
+                        host = `[${host}]`;
+                    }
+
+                    return `http://${host}:14501`;
+                } catch (error) {
+                    console.error('Error generating uplink link:', error);
+                    return '#';
+                }
+            };
+
+            // Language switch method
+            const switchLanguage = (lang) => {
+                currentLanguage.value = lang;
+                i18n.global.locale = lang;
+                graphTypes.value = graphTypeLabels[lang];
+                localStorage.setItem('aprsgo-language', lang);
+
+                // Update chart titles
+                updateChart();
+            };
+
+            // Detect browser language and set
+            const detectBrowserLanguage = () => {
+                const savedLang = localStorage.getItem('aprsgo-language');
+                if (savedLang) {
+                    switchLanguage(savedLang);
+                    return;
+                }
+
+                const browserLang = navigator.language || navigator.userLanguage;
+                if (browserLang.startsWith('zh')) {
+                    switchLanguage('zh');
+                } else {
+                    switchLanguage('en');
+                }
+            };
+
+            const initChart = () => {
+                nextTick(() => {
+                    const chartDom = document.getElementById('graph');
+                    if (!chartDom) return;
+
+                    chart = echarts.init(chartDom);
+                    updateChart();
+
+                    // Respond to window resize
+                    window.addEventListener('resize', () => {
+                        if (chart) {
+                            chart.resize();
+                        }
+                    });
+                });
+            };
+
+            const updateChart = () => {
+                if (!chart || !stats.value[currentGraphType.value]) return;
+
+                const data = stats.value[currentGraphType.value];
+                // Convert data format: from [timestamp, value] to [time, value]
+                const seriesData = data.map(item => [
+                    new Date(item[0] * 1000), // Convert timestamp to Date object
+                    item[1] // Value
+                ]);
+
+                // Sort by time
+                seriesData.sort((a, b) => a[0] - b[0]);
+
+                // Set title and formatting based on chart type
+                const currentType = graphTypes.value.find(t => t.value === currentGraphType.value);
+                const title = currentType ? currentType.label : currentGraphType.value;
+
+                let formatter = function (params) {
+                    const date = new Date(params[0].value[0]);
+                    return `${date.toLocaleString()}<br/>${params[0].marker} ${params[0].seriesName}: ${params[0].value[1]}`;
+                };
+
+                // Format for different data types
+                if (currentGraphType.value.includes('Bytes')) {
+                    formatter = function (params) {
+                        const date = new Date(params[0].value[0]);
+                        const value = formatBytes(params[0].value[1]);
+                        return `${date.toLocaleString()}<br/>${params[0].marker} ${params[0].seriesName}: ${value}`;
+                    };
+                } else if (currentGraphType.value === 'memory') {
+                    formatter = function (params) {
+                        const date = new Date(params[0].value[0]);
+                        const value = (params[0].value[1] || 0).toFixed(2) + ' MB';
+                        return `${date.toLocaleString()}<br/>${params[0].marker} ${params[0].seriesName}: ${value}`;
+                    };
+                }
+
+                const option = {
+                    tooltip: {
+                        trigger: 'axis',
+                        formatter: formatter
+                    },
+                    legend: {
+                        data: [title]
+                    },
+                    grid: {
+                        left: '3%',
+                        right: '4%',
+                        bottom: '3%',
+                        containLabel: true
+                    },
+                    xAxis: {
+                        type: 'time',
+                        boundaryGap: false
+                    },
+                    yAxis: {
+                        type: 'value',
+                        boundaryGap: [0, '100%']
+                    },
+                    series: [
+                        {
+                            name: title,
+                            type: 'line',
+                            smooth: true,
+                            symbol: 'none',
+                            areaStyle: {
+                                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                    { offset: 0, color: 'rgba(64, 158, 255, 0.3)' },
+                                    { offset: 1, color: 'rgba(64, 158, 255, 0.1)' }
+                                ])
+                            },
+                            lineStyle: {
+                                color: '#409EFF'
+                            },
+                            data: seriesData
+                        }
+                    ]
+                };
+
+                chart.setOption(option);
+            };
+
+            // Lifecycle
+            onMounted(() => {
+                detectBrowserLanguage();
+                fetchStatus();
+                fetchStats();
+                fetchMOTD();
+                initChart();
+
+                // Regular status updates
+                setInterval(fetchStatus, 1000);
+                setInterval(fetchStats, 30000);
+            });
+
+            return {
+                status,
+                stats,
+                uiError,
+                motd,
+                graphData,
+                pktsRxDialogVisible,
+                selectedConnection,
+                clientSort,
+                currentGraphType,
+                graphTypes,
+                columns,
+                serverInfo,
+                uplinkData,
+                uplinkStatusClass,
+                uplinkStatusText,
+                listenersData,
+                clientsData,
+                memoryData,
+                sortedClients,
+                currentLanguage,
+                languageOptions,
+                fetchStatus,
+                formatDateTime,
+                formatDuration,
+                formatDurationFromDate,
+                formatBytes,
+                switchGraphType,
+                getPktsRxClass,
+                showPktsRxDialog,
+                handleClientSort,
+                switchLanguage,
+                generateClientLink,
+                generateUplinkLink
+            };
+        }
+    });
+
+    app.use(i18n);
+    app.use(ElementPlus);
+    app.mount('#app');
+</script>
+</body>
+</html>
