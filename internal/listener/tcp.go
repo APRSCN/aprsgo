@@ -110,7 +110,7 @@ func (c *TCPAPRSClient) startHeartbeat() {
 	c.heartbeatStopChan = make(chan struct{})
 
 	go func() {
-		for {
+		for c != nil {
 			select {
 			case <-c.heartbeatTicker.C:
 				c.sendHeartbeatWithRetry()
