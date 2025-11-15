@@ -62,10 +62,8 @@ type TCPAPRSClient struct {
 	stats *model.Statistics
 
 	// Heartbeat management
-	heartbeatTicker   *time.Ticker
 	heartbeatStopChan chan struct{}
 	heartbeatMutex    sync.Mutex
-	heartbeatOnce     sync.Once
 }
 
 // Send data to client
@@ -101,19 +99,35 @@ func (c *TCPAPRSClient) Close() {
 	}
 }
 
-// startHeartbeat starts a heartbeat ticker
+// startHeartbeat starts a heartbeat ticker that is completely managed within the closure
 func (c *TCPAPRSClient) startHeartbeat() {
 	c.heartbeatMutex.Lock()
 	defer c.heartbeatMutex.Unlock()
 
-	c.heartbeatTicker = time.NewTicker(30 * time.Second)
+	// Don't start if already stopped
+	if c.heartbeatStopChan != nil {
+		return
+	}
+
 	c.heartbeatStopChan = make(chan struct{})
 
 	go func() {
-		for c != nil {
+		// Create ticker inside the goroutine
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+
+		for {
 			select {
-			case <-c.heartbeatTicker.C:
-				c.sendHeartbeatWithRetry()
+			case <-ticker.C:
+				// Safely check if we should send heartbeat
+				c.mu.Lock()
+				shouldSend := c.conn != nil && time.Since(c.lastActive) >= 20*time.Second
+				c.mu.Unlock()
+
+				if shouldSend {
+					c.sendHeartbeatWithRetry()
+				}
+
 			case <-c.heartbeatStopChan:
 				return
 			}
@@ -121,50 +135,43 @@ func (c *TCPAPRSClient) startHeartbeat() {
 	}()
 }
 
-// stopHeartbeat stops the heartbeat ticker
+// stopHeartbeat stops the heartbeat goroutine
 func (c *TCPAPRSClient) stopHeartbeat() {
-	c.heartbeatOnce.Do(func() {
-		c.heartbeatMutex.Lock()
-		defer c.heartbeatMutex.Unlock()
+	c.heartbeatMutex.Lock()
+	defer c.heartbeatMutex.Unlock()
 
-		if c.heartbeatTicker != nil {
-			c.heartbeatTicker.Stop()
-			c.heartbeatTicker = nil
+	if c.heartbeatStopChan != nil {
+		select {
+		case <-c.heartbeatStopChan:
+			// Already closed
+		default:
+			close(c.heartbeatStopChan)
 		}
-
-		if c.heartbeatStopChan != nil {
-			select {
-			case <-c.heartbeatStopChan:
-			default:
-				close(c.heartbeatStopChan)
-			}
-		}
-	})
+		c.heartbeatStopChan = nil
+	}
 }
 
 // sendHeartbeatWithRetry sends heartbeat with retry mechanism
 func (c *TCPAPRSClient) sendHeartbeatWithRetry() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.conn == nil {
-		return
-	}
-
-	if time.Since(c.lastActive) < 20*time.Second {
-		return
-	}
-
 	maxRetries := 3
 	retryInterval := 2 * time.Second
 
 	for retry := 0; retry < maxRetries; retry++ {
+		c.mu.Lock()
+		// Double-check connection is still valid after acquiring lock
+		if c.conn == nil {
+			c.mu.Unlock()
+			return
+		}
+
 		err := c.Send(fmt.Sprintf(
 			"# %s-%s %s %s %s",
 			config.ENName, config.Nickname, config.Version,
 			time.Now().Format(time.RFC1123),
 			config.C.GetString("server.id"),
 		))
+		c.mu.Unlock()
+
 		if err == nil {
 			logger.L.Debug("Heartbeat sent successfully",
 				zap.String("client", c.conn.RemoteAddr().String()),
@@ -172,9 +179,6 @@ func (c *TCPAPRSClient) sendHeartbeatWithRetry() {
 			return
 		}
 
-		if c.conn == nil {
-			return
-		}
 		logger.L.Debug("Heartbeat send failed, retrying",
 			zap.String("client", c.conn.RemoteAddr().String()),
 			zap.String("callsign", c.callSign),
@@ -183,6 +187,14 @@ func (c *TCPAPRSClient) sendHeartbeatWithRetry() {
 
 		if retry < maxRetries-1 {
 			time.Sleep(retryInterval)
+
+			// Check if we should stop retrying
+			c.mu.Lock()
+			if c.conn == nil {
+				c.mu.Unlock()
+				return
+			}
+			c.mu.Unlock()
 		}
 	}
 
