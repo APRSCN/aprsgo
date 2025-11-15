@@ -34,13 +34,8 @@ func recvHandler(packet string) {
 	}
 
 	// Try to parse
-	// TODO: Error drop disabled due to immature parser
-	parsed, err := parser.Parse(packet)
-	//if err != nil {
-	//	// Drop err
-	//	Stats.ReceivedErrors++
-	//	return
-	//}
+	// We don't care error here
+	parsed, _ := parser.Parse(packet)
 
 	// Write packet to stream
 	Stream.Write(parsed, "uplink")

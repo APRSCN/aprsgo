@@ -19,8 +19,6 @@ type Client struct {
 	Version  string
 	Filter   string
 
-	c *TCPAPRSClient // For closing
-
 	Stats model.Statistics
 }
 
@@ -30,43 +28,31 @@ var Clients = make(map[any]*Client)
 // ClientsMutex is the operation lock of clients
 var ClientsMutex sync.RWMutex
 
-// Get a client with OK
-func Get(key any) (*Client, bool) {
-	ClientsMutex.RLock()
-	defer ClientsMutex.RUnlock()
-	v, ok := Clients[key]
-	return v, ok
-}
-
-// GetWithoutOK gets a client without OK
-func GetWithoutOK(key any) *Client {
-	ClientsMutex.RLock()
-	defer ClientsMutex.RUnlock()
-	return Clients[key]
-}
-
-// KickOld kicks old client
-func KickOld(client any, callSign string) {
-	ClientsMutex.Lock()
-	defer ClientsMutex.Unlock()
-
-	for k, v := range Clients {
-		if k != client && v.ID == callSign {
-			v.c.Close()
+// update client list
+func update() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			newClients := make(map[any]*Client)
+			for _, l := range Listeners {
+				for c := range l.s.clients {
+					newClients[c] = &Client{
+						At:       l.s.listener.Addr().String(),
+						ID:       c.callSign,
+						Verified: c.verified,
+						Addr:     c.conn.RemoteAddr().String(),
+						Uptime:   c.uptime,
+						Last:     c.lastActive,
+						Software: c.software,
+						Version:  c.version,
+						Filter:   c.filter,
+						Stats:    *c.stats,
+					}
+				}
+			}
+			Clients = newClients
 		}
 	}
-}
-
-// Set a client
-func Set(key any, v *Client) {
-	ClientsMutex.Lock()
-	defer ClientsMutex.Unlock()
-	Clients[key] = v
-}
-
-// Del a client
-func Del(key any) {
-	ClientsMutex.Lock()
-	defer ClientsMutex.Unlock()
-	delete(Clients, key)
 }

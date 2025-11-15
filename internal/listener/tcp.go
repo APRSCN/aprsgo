@@ -29,66 +29,214 @@ var serverCommands = []string{
 	"filter",
 }
 
-// TCPAPRSClient provides a struct for APRS client connection
-type TCPAPRSClient struct {
-	conn        net.Conn
-	callSign    string
-	verified    bool
-	loggedIn    bool
-	lastActive  time.Time
-	software    string
-	version     string
-	mu          sync.Mutex
-	unsubscribe func()
-	dataCh      <-chan uplink.StreamData
-	mode        client.Mode
-	filter      string
-
-	server *TCPAPRSServer
-	dup    *historydb.MapFloat64History
-
-	stats *model.Statistics // Client statistics
-}
-
-// TCPAPRSServer provides a struct for APRS server
-type TCPAPRSServer struct {
-	port     int
-	listener net.Listener
-	clients  map[*TCPAPRSClient]bool
-	mu       sync.RWMutex
-	stopChan chan struct{}
-	mode     client.Mode
-	index    int
-
-	stats *model.Statistics // Server statistics
-}
-
 // Global statistics for all servers
 var (
 	globalStats model.Statistics
 	statsMutex  sync.RWMutex
 )
 
-// updateAllRates updates rates for global Stats and all clients
-func updateAllRates() {
-	statsMutex.Lock()
-	defer statsMutex.Unlock()
+// TCPAPRSClient provides a struct for APRS client connection
+type TCPAPRSClient struct {
+	// Connection related fields
+	conn        net.Conn
+	mu          sync.Mutex
+	unsubscribe func()
+	dataCh      <-chan uplink.StreamData
 
-	// Update global rates
-	currentSentPackets := globalStats.SentPackets
-	currentReceivedPackets := globalStats.ReceivedPackets
-	currentSentBytes := globalStats.SentBytes
-	currentReceivedBytes := globalStats.ReceivedBytes
+	// Client identification and status
+	callSign   string
+	verified   bool
+	loggedIn   bool
+	uptime     time.Time
+	lastActive time.Time
+	software   string
+	version    string
+	mode       client.Mode
+	filter     string
 
-	globalStats.SendPacketRate = currentSentPackets - globalStats.LastSentPackets
-	globalStats.RecvPacketRate = currentReceivedPackets - globalStats.LastReceivedPackets
-	globalStats.SendByteRate = currentSentBytes - globalStats.LastSentBytes
-	globalStats.RecvByteRate = currentReceivedBytes - globalStats.LastReceivedBytes
+	// Server reference and duplicate checking
+	server *TCPAPRSServer
+	dup    *historydb.MapFloat64History
 
-	globalStats.LastSentPackets = currentSentPackets
-	globalStats.LastReceivedPackets = currentReceivedPackets
-	globalStats.LastSentBytes = currentSentBytes
-	globalStats.LastReceivedBytes = currentReceivedBytes
+	// Statistics
+	stats *model.Statistics
+
+	// Heartbeat management
+	heartbeatTicker   *time.Ticker
+	heartbeatStopChan chan struct{}
+	heartbeatMutex    sync.Mutex
+	heartbeatOnce     sync.Once
+}
+
+// Send data to client
+func (c *TCPAPRSClient) Send(data string) error {
+	if c.conn == nil {
+		return fmt.Errorf("connection closed")
+	}
+
+	_, err := fmt.Fprintf(c.conn, "%s\n", data)
+	if err == nil {
+		// Update send statistics
+		packetSize := uint64(len(data))
+		c.stats.SentBytes += packetSize
+		c.server.UpdateServerSendStats(1, packetSize)
+	}
+	return err
+}
+
+// Close connection of client
+func (c *TCPAPRSClient) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Stop heartbeat
+	c.stopHeartbeat()
+
+	if c.unsubscribe != nil {
+		c.unsubscribe()
+	}
+	if c.conn != nil {
+		_ = c.conn.Close()
+		c.conn = nil
+	}
+}
+
+// startHeartbeat starts a heartbeat ticker
+func (c *TCPAPRSClient) startHeartbeat() {
+	c.heartbeatMutex.Lock()
+	defer c.heartbeatMutex.Unlock()
+
+	c.heartbeatTicker = time.NewTicker(30 * time.Second)
+	c.heartbeatStopChan = make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case <-c.heartbeatTicker.C:
+				c.sendHeartbeatWithRetry()
+			case <-c.heartbeatStopChan:
+				return
+			}
+		}
+	}()
+}
+
+// stopHeartbeat stops the heartbeat ticker
+func (c *TCPAPRSClient) stopHeartbeat() {
+	c.heartbeatOnce.Do(func() {
+		c.heartbeatMutex.Lock()
+		defer c.heartbeatMutex.Unlock()
+
+		if c.heartbeatTicker != nil {
+			c.heartbeatTicker.Stop()
+			c.heartbeatTicker = nil
+		}
+
+		if c.heartbeatStopChan != nil {
+			select {
+			case <-c.heartbeatStopChan:
+			default:
+				close(c.heartbeatStopChan)
+			}
+		}
+	})
+}
+
+// sendHeartbeatWithRetry sends heartbeat with retry mechanism
+func (c *TCPAPRSClient) sendHeartbeatWithRetry() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.conn == nil {
+		return
+	}
+
+	if time.Since(c.lastActive) < 20*time.Second {
+		return
+	}
+
+	maxRetries := 3
+	retryInterval := 2 * time.Second
+
+	for retry := 0; retry < maxRetries; retry++ {
+		err := c.Send(fmt.Sprintf(
+			"# %s-%s %s %s %s",
+			config.ENName, config.Nickname, config.Version,
+			time.Now().Format(time.RFC1123),
+			config.C.GetString("server.id"),
+		))
+		if err == nil {
+			logger.L.Debug("Heartbeat sent successfully",
+				zap.String("client", c.conn.RemoteAddr().String()),
+				zap.String("callsign", c.callSign))
+			return
+		}
+
+		if c.conn == nil {
+			return
+		}
+		logger.L.Debug("Heartbeat send failed, retrying",
+			zap.String("client", c.conn.RemoteAddr().String()),
+			zap.String("callsign", c.callSign),
+			zap.Int("retry", retry+1),
+			zap.Error(err))
+
+		if retry < maxRetries-1 {
+			time.Sleep(retryInterval)
+		}
+	}
+
+	logger.L.Debug("Heartbeat failed after all retries, disconnecting client",
+		zap.String("client", c.conn.RemoteAddr().String()),
+		zap.String("callsign", c.callSign))
+
+	c.Close()
+}
+
+// handleUplinkData sends data to client from uplink stream
+func (c *TCPAPRSClient) handleUplinkData() {
+	for data := range c.dataCh {
+		c.mu.Lock()
+		if c.loggedIn && c.conn != nil && data.Writer != c.callSign {
+			switch c.mode {
+			case client.Fullfeed:
+				_ = c.Send(data.Data.Raw)
+				c.stats.SentPackets += 1
+			case client.IGate:
+				if len(Listeners) > c.server.index && Listeners[c.server.index].Filter != "" {
+					if Filter(Listeners[c.server.index].Filter, data.Data) {
+						_ = c.Send(data.Data.Raw)
+						c.stats.SentPackets += 1
+					}
+				} else {
+					if c.filter != "" {
+						if Filter(c.filter, data.Data) {
+							_ = c.Send(data.Data.Raw)
+							c.stats.SentPackets += 1
+						}
+					}
+				}
+			}
+		}
+		c.mu.Unlock()
+	}
+}
+
+// TCPAPRSServer provides a struct for APRS server
+type TCPAPRSServer struct {
+	// Server connection and management
+	port     int
+	listener net.Listener
+	clients  map[*TCPAPRSClient]bool
+	mu       sync.RWMutex
+	stopChan chan struct{}
+
+	// Server configuration
+	mode  client.Mode
+	index int
+
+	// Statistics
+	stats *model.Statistics
 }
 
 // NewTCPAPRSServer creates a new APRS server
@@ -115,18 +263,30 @@ func (s *TCPAPRSServer) Start(addr string) error {
 	// Start statistics updater for this server
 	go s.updateStats()
 
-	// Connection clean goroutine
-	go s.cleanupInactiveClients()
-
 	// Main server goroutine
 	go s.handleServer()
 
 	return nil
 }
 
-// handleServer handles the main server
+// Stop an APRS server
+func (s *TCPAPRSServer) Stop() {
+	close(s.stopChan)
+	if s.listener != nil {
+		_ = s.listener.Close()
+	}
+
+	// Close all client connections
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for c := range s.clients {
+		c.Close()
+	}
+}
+
+// handleServer handles the main server loop for accepting connections
 func (s *TCPAPRSServer) handleServer() {
-	// Accept connection
+	// Accept connections
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -141,6 +301,313 @@ func (s *TCPAPRSServer) handleServer() {
 
 		go s.handleClient(conn)
 	}
+}
+
+// handleClient handles individual client connection
+func (s *TCPAPRSServer) handleClient(conn net.Conn) {
+	c := &TCPAPRSClient{
+		conn:       conn,
+		uptime:     time.Now(),
+		lastActive: time.Now(),
+		mode:       s.mode,
+
+		server: s,
+		dup:    historydb.NewMapFloat64History(),
+
+		stats: new(model.Statistics),
+	}
+
+	// Register client
+	s.mu.Lock()
+	s.clients[c] = true
+	if len(Listeners) > s.index {
+		Listeners[s.index].OnlineClient = len(s.clients)
+		if Listeners[s.index].OnlineClient > Listeners[s.index].PeakClient {
+			Listeners[s.index].PeakClient = Listeners[s.index].OnlineClient
+		}
+	}
+	s.mu.Unlock()
+
+	logger.L.Info("Client connected",
+		zap.String("remote_addr", conn.RemoteAddr().String()),
+		zap.Int("total_clients", len(s.clients)))
+
+	defer func() {
+		// Stop heartbeat
+		c.stopHeartbeat()
+
+		// Remove client
+		s.mu.Lock()
+		delete(s.clients, c)
+		if len(Listeners) > s.index {
+			Listeners[s.index].OnlineClient = len(s.clients)
+		}
+		s.mu.Unlock()
+
+		// Close connection and unsubscribe
+		if c.unsubscribe != nil {
+			c.unsubscribe()
+		}
+		if c.conn != nil {
+			_ = c.conn.Close()
+			c.conn = nil
+		}
+
+		logger.L.Info("Client disconnected",
+			zap.String("remote_addr", conn.RemoteAddr().String()),
+			zap.String("callsign", c.callSign),
+			zap.Int("remaining_clients", len(s.clients)))
+	}()
+
+	// Start heartbeat
+	c.startHeartbeat()
+
+	// Send welcome message
+	_ = c.Send(fmt.Sprintf("# %s %s/%s", config.ENName, config.Version, config.Nickname))
+
+	// Subscribe to data stream for this client
+	c.dataCh, c.unsubscribe = uplink.Stream.Subscribe()
+	go c.handleUplinkData()
+
+	lineCount := 0
+	reader := bufio.NewReader(conn)
+	for {
+		// Add count
+		lineCount++
+
+		// Set read timeout
+		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+
+		// 30s not send login
+		if time.Now().Sub(c.uptime) > 30*time.Second && !c.loggedIn {
+			return
+		}
+
+		// Read data from client
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			var netErr net.Error
+			switch {
+			case errors.As(err, &netErr) && netErr.Timeout():
+				continue
+			case errors.Is(err, io.EOF):
+				return
+			}
+			logger.L.Debug(fmt.Sprintf("Read error from %s", conn.RemoteAddr().String()), zap.Error(err))
+			return
+		}
+
+		// Trim whitespace
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// Why you're using a browser to visit the APRS port?
+		if lineCount == 1 && strings.Contains(line, "HTTP/") {
+			return
+		}
+
+		// Update last active time
+		c.lastActive = time.Now()
+
+		// Update statistics for received data
+		packetSize := uint64(len(line))
+		c.stats.ReceivedBytes += packetSize
+		s.stats.ReceivedBytes += packetSize
+		globalStats.ReceivedBytes += packetSize
+
+		// Process received packet
+		s.processPacket(c, line)
+	}
+}
+
+// ClientCount returns count of active clients
+func (s *TCPAPRSServer) ClientCount() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.clients)
+}
+
+// kickOld disconnects old clients with same callsign
+func (s *TCPAPRSServer) kickOld(client *TCPAPRSClient, callsign string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for c := range s.clients {
+		if client != c && c.callSign == callsign {
+			logger.L.Info("Kicking old client with same callsign",
+				zap.String("callsign", callsign),
+				zap.String("old_client", c.conn.RemoteAddr().String()),
+				zap.String("new_client", client.conn.RemoteAddr().String()))
+			c.Close()
+		}
+	}
+}
+
+// processPacket processes received packet from client
+func (s *TCPAPRSServer) processPacket(c *TCPAPRSClient, packet string) {
+	// Parse packet type and route to appropriate handler
+	if strings.HasPrefix(packet, "user ") {
+		s.handleLogin(c, packet)
+	} else if strings.HasPrefix(packet, "#") {
+		s.handleComment(c)
+	} else if strings.Contains(packet, ">") {
+		s.handleAPRSData(c, packet)
+
+		// Update statistics for received packets
+		c.stats.ReceivedPackets += 1
+		s.stats.ReceivedPackets += 1
+		globalStats.ReceivedPackets += 1
+	} else {
+		_ = c.Send("# invalid packet")
+	}
+}
+
+// handleLogin processes user login command
+func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
+	// Parse login command
+	parts := strings.Fields(packet)
+	if len(parts) < 4 {
+		_ = client.Send("# invalid login")
+		return
+	}
+
+	if parts[0] != "user" {
+		_ = client.Send("# invalid login")
+		return
+	}
+
+	// Extract callsign and parameters
+	callSign := parts[1]
+	passcode := ""
+	for k, v := range parts {
+		switch v {
+		case "pass":
+			passcode = parts[k+1]
+		case "vers":
+			client.software = parts[k+1]
+			client.version = parts[k+2]
+		// Server commands
+		case "filter":
+			client.filter = ""
+			for i := 1; i < len(parts)-k; i++ {
+				if slices.Contains(serverCommands, parts[k+i]) {
+					break
+				}
+				client.filter += fmt.Sprintf("%s ", parts[k+i])
+			}
+			client.filter = strings.TrimSuffix(client.filter, " ")
+		}
+	}
+
+	// Record client callsign
+	client.callSign = callSign
+
+	// Disconnect old clients with same callsign
+	s.kickOld(client, callSign)
+
+	// Validate passcode
+	intPasscode, _ := strconv.Atoi(passcode)
+	if aprsutils.Passcode(callSign) == intPasscode {
+		client.mu.Lock()
+		client.verified = true
+		_ = client.Send(fmt.Sprintf("# logresp %s verified, server %s", callSign, config.C.GetString("server.id")))
+		logger.L.Info("Client logged in successfully",
+			zap.String("callsign", callSign),
+			zap.String("client", client.conn.RemoteAddr().String()))
+		client.mu.Unlock()
+	} else {
+		_ = client.Send(fmt.Sprintf("# logresp %s unverified, server %s", callSign, config.C.GetString("server.id")))
+		logger.L.Warn("Client login failed - invalid passcode",
+			zap.String("callsign", callSign),
+			zap.String("client", client.conn.RemoteAddr().String()))
+	}
+	client.loggedIn = true
+}
+
+// handleComment processes comment/heartbeat packets
+func (s *TCPAPRSServer) handleComment(client *TCPAPRSClient) {
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	_ = client.Send("# pong")
+}
+
+// handleAPRSData processes APRS data packets
+func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
+	now := time.Now()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if !c.verified {
+		_ = c.Send("# invalid login")
+		return
+	}
+
+	// Duplicate checking using hash
+	h64 := fnv.New64a()
+	_, err := h64.Write([]byte(packet))
+	if err == nil {
+		hash64 := h64.Sum64()
+
+		// Clear old entries first
+		c.dup.ClearByValue(30)
+
+		if c.dup.Contain(hash64) {
+			// Drop duplicate packet
+			c.stats.ReceivedDups++
+			return
+		}
+
+		go c.dup.Record(hash64, float64(now.UnixNano())/1e9)
+	}
+
+	// Parse APRS packet
+	parsed, err := parser.Parse(packet)
+	if err != nil {
+		// Drop parsing errors
+		c.stats.ReceivedErrors++
+		return
+	}
+
+	// Process QConstruct for packet routing
+	qConfig := &qConstruct.QConfig{
+		ServerLogin:    config.C.GetString("server.id"),
+		ClientLogin:    c.callSign,
+		ConnectionType: qConstruct.ConnectionVerified,
+		EnableTrace:    false,
+		IsVerified:     true,
+	}
+	result, err := qConstruct.QConstruct(parsed, qConfig)
+	if err != nil || result.ShouldDrop || result.IsLoop {
+		c.stats.ReceivedQDrop++
+		return
+	}
+
+	// Replace path in packet
+	packet, err = qConstruct.Replace(packet, parsed.To, result.Path)
+	if err != nil {
+		c.stats.ReceivedErrors++
+		return
+	}
+
+	// Reparse modified packet
+	parsed, err = parser.Parse(packet)
+	if err != nil {
+		c.stats.ReceivedErrors++
+		return
+	}
+
+	// Send to uplink stream
+	uplink.Stream.Write(parsed, c.callSign)
+}
+
+// UpdateServerSendStats updates server send statistics
+func (s *TCPAPRSServer) UpdateServerSendStats(packets uint64, bytes uint64) {
+	s.stats.SentPackets += packets
+	s.stats.SentBytes += bytes
+	globalStats.SentPackets += packets
+	globalStats.SentBytes += bytes
 }
 
 // updateStats updates server statistics rates every second
@@ -202,380 +669,28 @@ func (s *TCPAPRSServer) updateClientRates() {
 		c.stats.LastSentBytes = currentSentBytes
 		c.stats.LastReceivedBytes = currentReceivedBytes
 
-		GetWithoutOK(c).Stats = *c.stats
-
 		c.mu.Unlock()
 	}
 }
 
-// Stop an APRS server
-func (s *TCPAPRSServer) Stop() {
-	close(s.stopChan)
-	if s.listener != nil {
-		_ = s.listener.Close()
-	}
+// updateAllRates updates rates for global stats and all clients
+func updateAllRates() {
+	statsMutex.Lock()
+	defer statsMutex.Unlock()
 
-	// Close all client connection
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for c := range s.clients {
-		c.Close()
-	}
-}
+	// Update global rates
+	currentSentPackets := globalStats.SentPackets
+	currentReceivedPackets := globalStats.ReceivedPackets
+	currentSentBytes := globalStats.SentBytes
+	currentReceivedBytes := globalStats.ReceivedBytes
 
-// handleClient handles connection from client
-func (s *TCPAPRSServer) handleClient(conn net.Conn) {
-	c := &TCPAPRSClient{
-		conn:       conn,
-		lastActive: time.Now(),
-		mode:       s.mode,
+	globalStats.SendPacketRate = currentSentPackets - globalStats.LastSentPackets
+	globalStats.RecvPacketRate = currentReceivedPackets - globalStats.LastReceivedPackets
+	globalStats.SendByteRate = currentSentBytes - globalStats.LastSentBytes
+	globalStats.RecvByteRate = currentReceivedBytes - globalStats.LastReceivedBytes
 
-		server: s,
-		dup:    historydb.NewMapFloat64History(),
-
-		stats: new(model.Statistics),
-	}
-
-	// Register a client
-	s.mu.Lock()
-	s.clients[c] = true
-	Set(c, &Client{
-		At:     s.listener.Addr().String(),
-		Addr:   c.conn.RemoteAddr().String(),
-		Uptime: time.Now(),
-		Last:   c.lastActive,
-		c:      c,
-		Stats:  *c.stats,
-	})
-	Listeners[s.index].OnlineClient = len(s.clients)
-	if Listeners[s.index].OnlineClient > Listeners[s.index].PeakClient {
-		Listeners[s.index].PeakClient = Listeners[s.index].OnlineClient
-	}
-	s.mu.Unlock()
-
-	defer func() {
-		// Delete a client
-		s.mu.Lock()
-		delete(s.clients, c)
-		Del(c)
-		if len(Listeners) > s.index {
-			Listeners[s.index].OnlineClient = len(s.clients)
-		}
-		s.mu.Unlock()
-		c.Close()
-	}()
-
-	logger.L.Debug("New client connected", zap.String("client", c.conn.RemoteAddr().String()))
-
-	// Send welcome
-	_ = c.Send(fmt.Sprintf("# %s %s/%s", config.ENName, config.Version, config.Nickname))
-
-	// Subscribe data for this client
-	c.dataCh, c.unsubscribe = uplink.Stream.Subscribe()
-	go c.handleUplinkData()
-
-	reader := bufio.NewReader(conn)
-	for {
-		// Set timeout
-		_ = conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-
-		// Read data from client
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			var netErr net.Error
-			switch {
-			case errors.As(err, &netErr) && netErr.Timeout():
-				continue
-			case errors.Is(err, io.EOF):
-				return
-			}
-			logger.L.Debug(fmt.Sprintf("Read error from %s", conn.RemoteAddr().String()), zap.Error(err))
-			return
-		}
-
-		// Trim space
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-
-		// Record last activate status
-		c.lastActive = time.Now()
-		GetWithoutOK(c).Last = c.lastActive
-
-		// Update statistics for received data
-		packetSize := uint64(len(line))
-		c.stats.ReceivedBytes += packetSize
-		s.stats.ReceivedBytes += packetSize
-		globalStats.ReceivedBytes += packetSize
-
-		// Process received data
-		s.processPacket(c, line)
-	}
-}
-
-// processPacket processes received data
-func (s *TCPAPRSServer) processPacket(c *TCPAPRSClient, packet string) {
-	// Parse packet
-	if strings.HasPrefix(packet, "user ") {
-		s.handleLogin(c, packet)
-	} else if strings.HasPrefix(packet, "#") {
-		s.handleComment(c)
-	} else if strings.Contains(packet, ">") {
-		s.handleAPRSData(c, packet)
-
-		// Update statistics for received data
-		c.stats.ReceivedPackets += 1
-		s.stats.ReceivedPackets += 1
-		globalStats.ReceivedPackets += 1
-	} else {
-		_ = c.Send("# invalid packet")
-	}
-}
-
-// handleLogin handles login command
-func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
-	// Parse
-	parts := strings.Fields(packet)
-	if len(parts) < 4 {
-		_ = client.Send("# invalid login")
-		return
-	}
-
-	if parts[0] != "user" {
-		_ = client.Send("# invalid login")
-		return
-	}
-
-	// Get callsign and passcode
-	callSign := parts[1]
-	passcode := ""
-	for k, v := range parts {
-		switch v {
-		case "pass":
-			passcode = parts[k+1]
-		case "vers":
-			client.software = parts[k+1]
-			client.version = parts[k+2]
-		// Server commands
-		case "filter":
-			client.filter = ""
-			for i := 1; i < len(parts)-k; i++ {
-				if slices.Contains(serverCommands, parts[k+i]) {
-					break
-				}
-				client.filter += fmt.Sprintf("%s ", parts[k+i])
-			}
-			client.filter = strings.TrimSuffix(client.filter, " ")
-		}
-	}
-	// Record client
-	GetWithoutOK(client).ID = callSign
-	client.callSign = callSign
-	GetWithoutOK(client).Software = client.software
-	GetWithoutOK(client).Version = client.version
-	GetWithoutOK(client).Filter = client.filter
-
-	// Kick old client
-	KickOld(client, callSign)
-
-	// Calc passcode
-	intPasscode, _ := strconv.Atoi(passcode)
-
-	// Check passcode
-	if aprsutils.Passcode(callSign) == intPasscode {
-		client.mu.Lock()
-
-		client.verified = true
-		GetWithoutOK(client).Verified = true
-
-		_ = client.Send(fmt.Sprintf("# logresp %s verified, server %s", callSign, config.C.GetString("server.id")))
-		logger.L.Debug(fmt.Sprintf("OnlineClient logged in as %s", callSign), zap.String("client", client.conn.RemoteAddr().String()))
-
-		client.mu.Unlock()
-	} else {
-		_ = client.Send(fmt.Sprintf("# logresp %s unverified, server %s", callSign, config.C.GetString("server.id")))
-	}
-	client.loggedIn = true
-}
-
-// handleComment handles
-func (s *TCPAPRSServer) handleComment(client *TCPAPRSClient) {
-	client.mu.Lock()
-	defer client.mu.Unlock()
-
-	_ = client.Send("# pong")
-}
-
-// handleAPRSData handles APRS packet
-func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
-	// Get time now
-	now := time.Now()
-
-	// Lock
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if !c.verified {
-		_ = c.Send("# invalid login")
-		return
-	}
-
-	// Hash the data (dup check)
-	h64 := fnv.New64a()
-	_, err := h64.Write([]byte(packet))
-	if err == nil {
-		hash64 := h64.Sum64()
-
-		// Clear first
-		c.dup.ClearByValue(30)
-
-		if c.dup.Contain(hash64) {
-			// Drop dup
-			c.stats.ReceivedDups++
-			return
-		}
-
-		go c.dup.Record(hash64, float64(now.UnixNano())/1e9)
-	}
-
-	// Try to parse
-	parsed, err := parser.Parse(packet)
-	if err != nil {
-		// Drop error
-		c.stats.ReceivedErrors++
-		return
-	}
-
-	// Process QConstruct
-	qConfig := &qConstruct.QConfig{
-		ServerLogin:    config.C.GetString("server.id"),
-		ClientLogin:    c.callSign,
-		ConnectionType: qConstruct.ConnectionVerified,
-		EnableTrace:    false,
-		IsVerified:     true,
-	}
-	result, err := qConstruct.QConstruct(parsed, qConfig)
-	if err != nil || result.ShouldDrop || result.IsLoop {
-		c.stats.ReceivedQDrop++
-		return
-	}
-
-	// Replace path
-	packet, err = qConstruct.Replace(packet, parsed.To, result.Path)
-	if err != nil {
-		// Drop error
-		c.stats.ReceivedErrors++
-		return
-	}
-	parsed, err = parser.Parse(packet)
-	if err != nil {
-		// Drop error
-		c.stats.ReceivedErrors++
-		return
-	}
-
-	uplink.Stream.Write(parsed, c.callSign)
-}
-
-// handleUplinkData sends data to client
-func (c *TCPAPRSClient) handleUplinkData() {
-	for data := range c.dataCh {
-		c.mu.Lock()
-		if c.loggedIn && c.conn != nil && data.Writer != c.callSign {
-			switch c.mode {
-			case client.Fullfeed:
-				_ = c.Send(data.Data.Raw)
-				c.stats.SentPackets += 1
-			case client.IGate:
-				if len(Listeners) > c.server.index && Listeners[c.server.index].Filter != "" {
-					if Filter(Listeners[c.server.index].Filter, data.Data) {
-						_ = c.Send(data.Data.Raw)
-						c.stats.SentPackets += 1
-					}
-				} else {
-					if c.filter != "" {
-						if Filter(c.filter, data.Data) {
-							_ = c.Send(data.Data.Raw)
-							c.stats.SentPackets += 1
-						}
-					}
-				}
-			}
-		}
-		c.mu.Unlock()
-		//time.Sleep(time.Millisecond * 10)
-	}
-}
-
-// Send data to client
-func (c *TCPAPRSClient) Send(data string) error {
-	if c.conn == nil {
-		return fmt.Errorf("connection closed")
-	}
-
-	_, err := fmt.Fprintf(c.conn, "%s\n", data)
-	if err == nil {
-		// Update send statistics
-		packetSize := uint64(len(data))
-		c.stats.SentBytes += packetSize
-		c.server.UpdateServerSendStats(1, packetSize)
-	}
-	return err
-}
-
-// Close connection of client
-func (c *TCPAPRSClient) Close() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if c.unsubscribe != nil {
-		c.unsubscribe()
-	}
-	if c.conn != nil {
-		_ = c.conn.Close()
-		c.conn = nil
-	}
-}
-
-// cleanupInactiveClients cleans inactivate client
-func (s *TCPAPRSServer) cleanupInactiveClients() {
-	ticker := time.NewTicker(5 * time.Minute)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			s.mu.Lock()
-			now := time.Now()
-			for c := range s.clients {
-				c.mu.Lock()
-				if now.Sub(c.lastActive) > 15*time.Minute {
-					c.Close()
-					delete(s.clients, c)
-					Del(c)
-					Listeners[s.index].OnlineClient = len(s.clients)
-				}
-				c.mu.Unlock()
-			}
-			s.mu.Unlock()
-		case <-s.stopChan:
-			return
-		}
-	}
-}
-
-// ClientCount return count of activate clients
-func (s *TCPAPRSServer) ClientCount() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.clients)
-}
-
-// UpdateServerSendStats updates server send statistics (called when sending data to clients)
-func (s *TCPAPRSServer) UpdateServerSendStats(packets uint64, bytes uint64) {
-	s.stats.SentPackets += packets
-	s.stats.SentBytes += bytes
-	globalStats.SentPackets += packets
-	globalStats.SentBytes += bytes
+	globalStats.LastSentPackets = currentSentPackets
+	globalStats.LastReceivedPackets = currentReceivedPackets
+	globalStats.LastSentBytes = currentSentBytes
+	globalStats.LastReceivedBytes = currentReceivedBytes
 }

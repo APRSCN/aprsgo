@@ -41,6 +41,9 @@ func InitListener() {
 		load()
 	})
 
+	// Start update daemon
+	go update()
+
 	logger.L.Debug("Listener initialized")
 }
 
