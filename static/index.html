@@ -1037,6 +1037,7 @@
                 // Check if client software contains specific keywords
                 const software = (client.software || '').toLowerCase();
                 const hasSpecialSoftware = software.includes('aprsc') ||
+                    software.includes('aprsd') ||
                     software.includes('aprsgo') ||
                     software.includes('javaprssrvr');
 
