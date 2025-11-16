@@ -1,6 +1,6 @@
 server:
-  # Memory limit in MB for HistoryDB
-  memory: 100
+  # Buf size setting (KB)
+  bufSize: 128
   # Custom processor name
   # Only available when we can not get CPU info
   #  model:

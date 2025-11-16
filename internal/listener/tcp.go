@@ -382,7 +382,7 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 	go c.handleUplinkData()
 
 	lineCount := 0
-	reader := bufio.NewReader(conn)
+	reader := bufio.NewReaderSize(conn, config.C.GetInt("server.bufSize")*1024)
 	for {
 		// Add count
 		lineCount++

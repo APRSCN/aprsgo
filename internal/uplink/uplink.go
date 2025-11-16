@@ -71,6 +71,7 @@ func selectUplink() {
 				config.C.GetString("server.id"),
 				strconv.Itoa(config.C.GetInt("server.passcode")),
 				uplink.Mode, uplink.Protocol, uplink.Host, uplink.Port,
+				client.WithBufSize(config.C.GetInt("server.bufSize")*1024),
 				client.WithLogger(&ZapLogger{logger: logger.L}),
 				client.WithSoftwareAndVersion(
 					fmt.Sprintf("%s-%s", config.ENName, config.Nickname), config.Version,
