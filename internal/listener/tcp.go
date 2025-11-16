@@ -213,18 +213,18 @@ func (c *TCPAPRSClient) handleUplinkData() {
 			switch c.mode {
 			case client.Fullfeed:
 				_ = c.Send(data.Data.Raw)
-				c.stats.SentPackets += 1
+				c.stats.SentPackets++
 			case client.IGate:
 				if len(Listeners) > c.server.index && Listeners[c.server.index].Filter != "" {
 					if Filter(Listeners[c.server.index].Filter, data.Data) {
 						_ = c.Send(data.Data.Raw)
-						c.stats.SentPackets += 1
+						c.stats.SentPackets++
 					}
 				} else {
 					if c.filter != "" {
 						if Filter(c.filter, data.Data) {
 							_ = c.Send(data.Data.Raw)
-							c.stats.SentPackets += 1
+							c.stats.SentPackets++
 						}
 					}
 				}
@@ -467,10 +467,11 @@ func (s *TCPAPRSServer) processPacket(c *TCPAPRSClient, packet string) {
 		s.handleAPRSData(c, packet)
 
 		// Update statistics for received packets
-		c.stats.ReceivedPackets += 1
-		s.stats.ReceivedPackets += 1
-		globalStats.ReceivedPackets += 1
+		c.stats.ReceivedPackets++
+		s.stats.ReceivedPackets++
+		globalStats.ReceivedPackets++
 	} else {
+		c.stats.ReceivedErrors++
 		_ = c.Send("# invalid packet")
 	}
 }
@@ -575,8 +576,8 @@ func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
 	}
 
 	// Parse APRS packet
-	parsed, err := parser.Parse(packet)
-	if err != nil {
+	parsed, _ := parser.Parse(packet, parser.WithDisableToCallsignValidate())
+	if parsed.To == "" {
 		// Drop parsing errors
 		c.stats.ReceivedErrors++
 		return

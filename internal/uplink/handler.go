@@ -15,6 +15,9 @@ func recvHandler(packet string) {
 	// Get time now
 	now := time.Now()
 
+	// Count packet rx
+	Stats.ReceivedPackets++
+
 	// Hash the data (dup check)
 	h64 := fnv.New64a()
 	_, err := h64.Write([]byte(packet))
@@ -34,17 +37,18 @@ func recvHandler(packet string) {
 	}
 
 	// Try to parse
-	// We don't care error here
-	parsed, _ := parser.Parse(packet)
+	parsed, _ := parser.Parse(packet, parser.WithDisableToCallsignValidate())
+	if parsed.To == "" {
+		// Drop parsing errors
+		Stats.ReceivedErrors++
+		return
+	}
 
 	// Write packet to stream
 	Stream.Write(parsed, "uplink")
 
 	// Record last receive time
 	Last = now
-
-	// Count packet rx
-	Stats.ReceivedPackets++
 }
 
 // sendHandler sends data to uplink

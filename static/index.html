@@ -401,8 +401,7 @@
                             </template>
                             <template #default="scope">
                                 <span v-if="col.key === 'packets_rx'"
-                                      :class="getPktsRxClass(scope.row)"
-                                      @click="showPktsRxDialog(scope.row)">
+                                      :class="getPktsRxClass(scope.row)">
                                     {{ scope.row.packets_rx }}
                                 </span>
                                 <span v-else-if="col.key === 'rate'">
@@ -462,8 +461,7 @@
                             <span v-else style="color: #f56c6c">{{ $t('NO') }}</span>
                         </span>
                                 <span v-else-if="col.key === 'packets_rx'"
-                                      :class="getPktsRxClass(scope.row)"
-                                      @click="showPktsRxDialog(scope.row)">
+                                      :class="getPktsRxClass(scope.row)">
                             {{ scope.row.packets_rx }}
                         </span>
                                 <span v-else-if="col.key === 'rate'">
@@ -503,25 +501,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Packet receive errors dialog -->
-    <el-dialog
-            v-model="pktsRxDialogVisible"
-            :title="$t('RXERR_DIALOG_TITLE', { username: selectedConnection?.id || '' })"
-            width="500px">
-        <p>{{ $t('RXERR_DIALOG_MESSAGE', { username: selectedConnection?.id || '' }) }}</p>
-        <p>
-                <span v-if="selectedConnection?.packetRXDup > 0">
-                    {{ $t('RXERR_DUPLICATE') }}: {{ selectedConnection?.packetRXDup || 0 }}<br>
-                </span>
-            <span v-if="selectedConnection?.packetRXErr > 0">
-                    {{ $t('RXERR_PACKET') }}: {{ selectedConnection?.packetRXErr || 0 }}<br>
-                </span>
-        </p>
-        <template #footer>
-            <el-button @click="pktsRxDialogVisible = false">{{ $t('CLOSE') }}</el-button>
-        </template>
-    </el-dialog>
 </div>
 
 <!-- Include Vue 3, Element Plus and axios -->
@@ -566,6 +545,8 @@
             UPLINK_STATUS: 'Status',
             UPLINK_UPTIME: 'Uptime',
             UPLINK_LAST_ACTIVITY: 'Last Activity',
+            UPLINK_PACKET_RX_DUP: 'Duplicate Packets Received',
+            UPLINK_PACKET_RX_ERR: 'Error Packets Received',
             UPLINK_PACKET_RX: 'Packets Received',
             UPLINK_PACKET_TX: 'Packets Sent',
             UPLINK_BYTES_RX: 'Bytes Received',
@@ -605,8 +586,6 @@
             MEM_FREE: 'Free Operations',
             MEM_GC_COUNT: 'GC Count',
             MEM_GC_PAUSE_TOTAL: 'GC Pause Total',
-            RXERR_DIALOG_TITLE: 'Packet Receive Errors - {username}',
-            RXERR_DIALOG_MESSAGE: 'The following receive errors occurred for {username}:',
             RXERR_PACKET: 'Packet Errors',
             RXERR_DUPLICATE: 'Duplicate Packets',
             CLOSE: 'Close',
@@ -647,6 +626,8 @@
             UPLINK_STATUS: '状态',
             UPLINK_UPTIME: '运行时间',
             UPLINK_LAST_ACTIVITY: '最后活动',
+            UPLINK_PACKET_RX_DUP: '重复数据包',
+            UPLINK_PACKET_RX_ERR: '错误数据包',
             UPLINK_PACKET_RX: '接收数据包',
             UPLINK_PACKET_TX: '发送数据包',
             UPLINK_BYTES_RX: '接收字节',
@@ -686,8 +667,6 @@
             MEM_FREE: '释放操作',
             MEM_GC_COUNT: '垃圾回收次数',
             MEM_GC_PAUSE_TOTAL: '垃圾回收暂停总时间',
-            RXERR_DIALOG_TITLE: '数据包接收错误 - {username}',
-            RXERR_DIALOG_MESSAGE: '{username} 发生了以下接收错误：',
             RXERR_PACKET: '数据包错误',
             RXERR_DUPLICATE: '重复数据包',
             CLOSE: '关闭',
@@ -731,7 +710,6 @@
             const uiError = ref('');
             const motd = ref('');
             const graphData = ref([]);
-            const pktsRxDialogVisible = ref(false);
             const selectedConnection = ref(null);
             const clientSort = reactive({
                 column: 'id',
@@ -827,6 +805,8 @@
                     { key: 'STATUS', value: uplink.up ? i18n.global.t('STATUS_UP') : i18n.global.t('STATUS_DOWN') },
                     { key: 'UPTIME', value: formatDateTime(uplink.uptime) },
                     { key: 'LAST_ACTIVITY', value: formatDateTime(uplink.last) },
+                    { key: 'PACKET_RX_DUP', value: uplink.packetRXDup},
+                    { key: 'PACKET_RX_ERR', value: uplink.packetRXErr},
                     { key: 'PACKET_RX', value: uplink.packetRX, rate: uplink.packetRXRate },
                     { key: 'PACKET_TX', value: uplink.packetTX, rate: uplink.packetTXRate },
                     { key: 'BYTES_RX', value: formatBytes(uplink.bytesRX), rate: formatBytes(uplink.bytesRXRate) },
@@ -1043,11 +1023,6 @@
                 const ratio = (connection._packetRXDup || 0) / (connection._packetRX || 1);
                 if (ratio > 0.1) return 'link';
                 return '';
-            };
-
-            const showPktsRxDialog = (connection) => {
-                selectedConnection.value = connection;
-                pktsRxDialogVisible.value = true;
             };
 
             const handleClientSort = ({ column, prop, order }) => {
@@ -1295,7 +1270,6 @@
                 uiError,
                 motd,
                 graphData,
-                pktsRxDialogVisible,
                 selectedConnection,
                 clientSort,
                 currentGraphType,
@@ -1319,7 +1293,6 @@
                 formatBytes,
                 switchGraphType,
                 getPktsRxClass,
-                showPktsRxDialog,
                 handleClientSort,
                 switchLanguage,
                 generateClientLink,
