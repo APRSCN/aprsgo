@@ -38,6 +38,9 @@ func update() {
 			newClients := make(map[any]*Client)
 			for _, l := range Listeners {
 				for c := range l.s.clients {
+					if c == nil || c.conn == nil {
+						continue
+					}
 					newClients[c] = &Client{
 						At:       l.s.listener.Addr().String(),
 						ID:       c.callSign,
