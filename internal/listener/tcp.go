@@ -341,8 +341,8 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 	s.mu.Unlock()
 
 	logger.L.Info("Client connected",
-		zap.String("remote_addr", conn.RemoteAddr().String()),
-		zap.Int("total_clients", len(s.clients)))
+		zap.String("remoteAddr", conn.RemoteAddr().String()),
+		zap.Int("totalClients", len(s.clients)))
 
 	defer func() {
 		// Stop heartbeat
@@ -366,9 +366,9 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		}
 
 		logger.L.Info("Client disconnected",
-			zap.String("remote_addr", conn.RemoteAddr().String()),
+			zap.String("remoteAddr", conn.RemoteAddr().String()),
 			zap.String("callsign", c.callSign),
-			zap.Int("remaining_clients", len(s.clients)))
+			zap.Int("remainingClients", len(s.clients)))
 	}()
 
 	// Start heartbeat
@@ -449,8 +449,8 @@ func (s *TCPAPRSServer) kickOld(client *TCPAPRSClient, callsign string) {
 		if client != c && c.callSign == callsign {
 			logger.L.Info("Kicking old client with same callsign",
 				zap.String("callsign", callsign),
-				zap.String("old_client", c.conn.RemoteAddr().String()),
-				zap.String("new_client", client.conn.RemoteAddr().String()))
+				zap.String("oldClient", c.conn.RemoteAddr().String()),
+				zap.String("newClient", client.conn.RemoteAddr().String()))
 			c.Close()
 		}
 	}
