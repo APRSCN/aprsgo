@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>APRSGo Status</title>
     <link rel="icon" href="favicon.ico">
-    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.gh.ink/assembly/element-plus/2.11.8/index.css">
+    <script src="https://cdn.gh.ink/assembly/echarts/5.6.0/echarts.simple.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -15,6 +15,43 @@
             background-color: #f5f7fa;
             color: #606266;
         }
+
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f5f7fa;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #409eff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loading-text {
+            font-size: 16px;
+            color: #606266;
+            margin-top: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         .container {
             padding: 20px;
             max-width: 1400px;
@@ -222,6 +259,11 @@
 </head>
 <body>
 <div id="app">
+    <!-- Overlay -->
+    <div id="loading-overlay" v-show="loading">
+        <div class="loading-spinner"></div>
+    </div>
+
     <div class="container">
         <!-- Header section -->
         <div class="header">
@@ -483,10 +525,10 @@
 </div>
 
 <!-- Include Vue 3, Element Plus and axios -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-<script src="https://unpkg.com/element-plus"></script>
-<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script src="https://unpkg.com/vue-i18n@9"></script>
+<script src="https://cdn.gh.ink/assembly/vue/3.5.24/vue.global.prod.js"></script>
+<script src="https://cdn.gh.ink/assembly/element-plus/2.11.8/index.full.min.js"></script>
+<script src="https://cdn.gh.ink/assembly/axios/1.1.3/axios.min.js"></script>
+<script src="https://cdn.gh.ink/assembly/vue-i18n/9.14.5/vue-i18n.global.prod.js"></script>
 
 <script>
     const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
@@ -695,6 +737,9 @@
                 column: 'id',
                 order: 'ascending'
             });
+
+            // Loading state
+            const loading = ref(true);
 
             // Language related
             const currentLanguage = ref('en');
@@ -1177,9 +1222,6 @@
                         trigger: 'axis',
                         formatter: formatter
                     },
-                    legend: {
-                        data: [title]
-                    },
                     grid: {
                         left: '3%',
                         right: '4%',
@@ -1217,13 +1259,30 @@
                 chart.setOption(option);
             };
 
+            // Hide loading overlay when data is ready
+            const hideLoading = () => {
+                loading.value = false;
+            };
+
             // Lifecycle
             onMounted(() => {
                 detectBrowserLanguage();
-                fetchStatus();
-                fetchStats();
-                fetchMOTD();
-                initChart();
+
+                // Fetch all initial data and then hide loading
+                Promise.all([
+                    fetchStatus(),
+                    fetchStats(),
+                    fetchMOTD()
+                ]).then(() => {
+                    // Initialize chart after data is loaded
+                    initChart();
+                    // Hide loading overlay after a short delay to ensure smooth transition
+                    setTimeout(hideLoading, 500);
+                }).catch(error => {
+                    console.error('Error loading initial data:', error);
+                    // Still hide loading even if there's an error
+                    setTimeout(hideLoading, 500);
+                });
 
                 // Regular status updates
                 setInterval(fetchStatus, 1000);
@@ -1252,6 +1311,7 @@
                 sortedClients,
                 currentLanguage,
                 languageOptions,
+                loading,
                 fetchStatus,
                 formatDateTime,
                 formatDuration,
