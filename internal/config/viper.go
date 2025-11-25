@@ -33,6 +33,7 @@ func staticConfig() *viper.Viper {
 		panic(err)
 	}
 
+	// Is debug mode?
 	if _, err = os.Stat("config_debug.yaml"); err == nil {
 		// Init config file
 		cfg.SetConfigName("config_debug")
