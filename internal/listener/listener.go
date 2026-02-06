@@ -64,8 +64,7 @@ func load() {
 		logger.L.Error("Error loading listeners config", zap.Error(err))
 		return
 	}
-	err = json.Unmarshal(marshalled, &listenersConfig)
-	if err != nil {
+	if err = json.Unmarshal(marshalled, &listenersConfig); err != nil {
 		logger.L.Error("Error loading listeners config", zap.Error(err))
 	}
 
@@ -92,8 +91,7 @@ func load() {
 		})
 
 		// Start server
-		err = server.Start(fmt.Sprintf("%s:%d", listener.Host, listener.Port))
-		if err != nil {
+		if err = server.Start(fmt.Sprintf("%s:%d", listener.Host, listener.Port)); err != nil {
 			logger.L.Error("Error starting server", zap.Error(err))
 		}
 	}

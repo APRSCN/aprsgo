@@ -9,6 +9,7 @@ import (
 	"github.com/APRSCN/aprsgo/internal/middleware"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/ghinknet/json"
+	"github.com/ghinknet/toolbox/expr"
 	"github.com/go-playground/validator/v10"
 	fiberzap "github.com/gofiber/contrib/v3/zap"
 	"github.com/gofiber/fiber/v3"
@@ -64,10 +65,10 @@ func fiberAPP() *fiber.App {
 	// Use global logger
 	app.Use(fiberzap.New(fiberzap.Config{
 		Logger: logger.L,
+		Fields: []string{"ip", "ips", "latency", "status", "method", "url", "requestId", "ua"},
 		FieldsFunc: func(c fiber.Ctx) []zap.Field {
-			requestID := requestid.FromContext(c)
 			return []zap.Field{
-				zap.String("requestID", requestID),
+				zap.String("client", expr.Ternary(len(c.IPs()) > 0, c.IPs(), []string{c.IP()})[0]),
 			}
 		},
 	}))
@@ -85,7 +86,7 @@ func fiberAPP() *fiber.App {
 
 // RunHTTPServer runs a HTTP server
 func RunHTTPServer() {
-	// Create Fiber app
+	// Create fiber app
 	app = fiberAPP()
 
 	// Use fiber as handler

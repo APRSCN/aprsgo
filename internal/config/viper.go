@@ -28,13 +28,12 @@ func staticConfig() *viper.Viper {
 	cfg.SetConfigName("config")
 
 	// Read the config file
-	err := cfg.ReadInConfig()
-	if err != nil {
+	if err := cfg.ReadInConfig(); err != nil {
 		panic(err)
 	}
 
 	// Is debug mode?
-	if _, err = os.Stat("config_debug.yaml"); err == nil {
+	if _, err := os.Stat("config_debug.yaml"); err == nil {
 		// Init config file
 		cfg.SetConfigName("config_debug")
 
@@ -42,8 +41,7 @@ func staticConfig() *viper.Viper {
 		Debug = true
 
 		// Read the debug config file
-		err = cfg.ReadInConfig()
-		if err != nil {
+		if err = cfg.ReadInConfig(); err != nil {
 			panic(err)
 		}
 	}

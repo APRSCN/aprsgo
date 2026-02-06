@@ -26,8 +26,7 @@ func InitEmbed() {
 	staticDir := "static"
 
 	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
-		err := copyEmbeddedResources(embeddedResources, "static", staticDir)
-		if err != nil {
+		if err = copyEmbeddedResources(embeddedResources, "static", staticDir); err != nil {
 			panic(err)
 		}
 	}
@@ -48,12 +47,12 @@ func copyEmbeddedResources(embedFS embed.FS, embedPath, targetPath string) error
 
 		if d.IsDir() {
 			return os.MkdirAll(targetFile, 0755)
-		} else {
-			data, err := embedFS.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			return os.WriteFile(targetFile, data, 0644)
 		}
+
+		data, err := embedFS.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(targetFile, data, 0644)
 	})
 }

@@ -72,14 +72,16 @@ func (c *TCPAPRSClient) Send(data string) error {
 		return fmt.Errorf("connection closed")
 	}
 
-	_, err := fmt.Fprintf(c.conn, "%s\n", data)
-	if err == nil {
-		// Update send statistics
-		packetSize := uint64(len(data))
-		c.stats.SentBytes += packetSize
-		c.server.UpdateServerSendStats(1, packetSize)
+	if _, err := fmt.Fprintf(c.conn, "%s\n", data); err != nil {
+		return err
 	}
-	return err
+
+	// Update send statistics
+	packetSize := uint64(len(data))
+	c.stats.SentBytes += packetSize
+	c.server.UpdateServerSendStats(1, packetSize)
+
+	return nil
 }
 
 // Close connection of client
@@ -559,8 +561,7 @@ func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
 
 	// Duplicate checking using hash
 	h64 := fnv.New64a()
-	_, err := h64.Write([]byte(packet))
-	if err == nil {
+	if _, err := h64.Write([]byte(packet)); err == nil {
 		hash64 := h64.Sum64()
 
 		// Clear old entries first

@@ -20,8 +20,7 @@ func recvHandler(packet string) {
 
 	// Hash the data (dup check)
 	h64 := fnv.New64a()
-	_, err := h64.Write([]byte(packet))
-	if err == nil {
+	if _, err := h64.Write([]byte(packet)); err == nil {
 		hash64 := h64.Sum64()
 
 		// Clear first

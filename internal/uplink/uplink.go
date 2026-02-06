@@ -57,8 +57,7 @@ func selectUplink() {
 		logger.L.Error("Error loading uplinks config", zap.Error(err))
 		return
 	}
-	err = json.Unmarshal(marshalled, &uplinksConfig)
-	if err != nil {
+	if err = json.Unmarshal(marshalled, &uplinksConfig); err != nil {
 		logger.L.Error("Error loading uplinks config", zap.Error(err))
 	}
 
@@ -79,8 +78,7 @@ func selectUplink() {
 				client.WithHandler(recvHandler),
 			)
 			// Connect client
-			err = Client.Connect()
-			if err != nil {
+			if err = Client.Connect(); err != nil {
 				continue
 			}
 
