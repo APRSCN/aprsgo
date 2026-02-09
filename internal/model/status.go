@@ -90,9 +90,9 @@ type ReturnClient struct {
 
 // ReturnStatus provides a struct to return status of server
 type ReturnStatus struct {
-	Msg       string           `json:"msg"`
-	Server    ReturnServer     `json:"server"`
-	Uplink    *ReturnUplink    `json:"uplink"`
-	Listeners []ReturnListener `json:"listeners"`
-	Clients   []ReturnClient   `json:"clients"`
+	Msg       string            `json:"msg"`
+	Server    ReturnServer      `json:"server"`
+	Uplink    *ReturnUplink     `json:"uplink"`
+	Listeners []*ReturnListener `json:"listeners"`
+	Clients   []*ReturnClient   `json:"clients"`
 }

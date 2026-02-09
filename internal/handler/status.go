@@ -70,12 +70,12 @@ func Status(c fiber.Ctx) error {
 	}
 
 	// Get listeners
-	listeners := make([]model.ReturnListener, 0)
+	listeners := make([]*model.ReturnListener, 0)
 	for _, l := range listener.Listeners {
 		if l.Visible == "hidden" {
 			continue
 		}
-		listeners = append(listeners, model.ReturnListener{
+		listeners = append(listeners, &model.ReturnListener{
 			Name:         l.Name,
 			Mode:         l.Type,
 			Protocol:     l.Protocol,
@@ -96,9 +96,9 @@ func Status(c fiber.Ctx) error {
 	}
 
 	// Get clients
-	clients := make([]model.ReturnClient, 0)
+	clients := make([]*model.ReturnClient, 0)
 	for _, v := range listener.Clients {
-		clients = append(clients, model.ReturnClient{
+		clients = append(clients, &model.ReturnClient{
 			At:           v.At,
 			ID:           v.ID,
 			Verified:     v.Verified,

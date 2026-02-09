@@ -6,11 +6,11 @@ require (
 	github.com/APRSCN/aprsutils v1.2.7
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/ghinknet/json v1.1.1
-	github.com/ghinknet/toolbox v1.4.0
+	github.com/ghinknet/toolbox v1.6.0
 	github.com/go-playground/validator/v10 v10.30.1
-	github.com/gofiber/contrib/v3/zap v1.0.0-rc.1
+	github.com/gofiber/contrib/v3/zap v1.0.0
 	github.com/gofiber/fiber/v3 v3.0.0
-	github.com/gofiber/utils/v2 v2.0.0
+	github.com/gofiber/utils/v2 v2.0.1
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shirou/gopsutil/v4 v4.26.1
 	github.com/spf13/viper v1.21.0
@@ -33,9 +33,9 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
-	github.com/gofiber/schema v1.6.0 // indirect
+	github.com/gofiber/schema v1.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/klauspost/compress v1.18.3 // indirect
+	github.com/klauspost/compress v1.18.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20251013123823-9fd1530e3ec3 // indirect
@@ -60,10 +60,10 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/arch v0.23.0 // indirect
+	golang.org/x/arch v0.24.0 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 )

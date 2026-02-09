@@ -51,7 +51,7 @@ func selectUplink() {
 	stop = false
 
 	// Load config
-	var uplinksConfig []model.UplinkConfig
+	var uplinksConfig []*model.UplinkConfig
 	marshalled, err := json.Marshal(config.C.Get("server.uplinks"))
 	if err != nil {
 		logger.L.Error("Error loading uplinks config", zap.Error(err))

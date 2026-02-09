@@ -29,7 +29,7 @@ type Listener struct {
 }
 
 // Listeners records all listeners
-var Listeners = make([]Listener, 0)
+var Listeners = make([]*Listener, 0)
 
 // InitListener inits listener daemon
 func InitListener() {
@@ -55,10 +55,10 @@ func load() {
 	}
 
 	// Remove listeners
-	Listeners = make([]Listener, 0)
+	Listeners = make([]*Listener, 0)
 
 	// Load config
-	var listenersConfig []model.ListenerConfig
+	var listenersConfig []*model.ListenerConfig
 	marshalled, err := json.Marshal(config.C.Get("server.listeners"))
 	if err != nil {
 		logger.L.Error("Error loading listeners config", zap.Error(err))
@@ -78,7 +78,7 @@ func load() {
 		server := NewTCPAPRSServer(client.Mode(listener.Mode), len(Listeners))
 
 		// Record listener
-		Listeners = append(Listeners, Listener{
+		Listeners = append(Listeners, &Listener{
 			Name:     listener.Name,
 			Type:     listener.Mode,
 			Protocol: listener.Protocol,
