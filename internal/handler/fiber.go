@@ -14,12 +14,11 @@ import (
 	fiberzap "github.com/gofiber/contrib/v3/zap"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
+	recoverer "github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/gofiber/utils/v2"
 	"go.uber.org/zap"
 )
-
-var app *fiber.App
 
 // structValidator struct implementation
 type structValidator struct {
@@ -38,6 +37,7 @@ func fiberAPP() *fiber.App {
 		JSONDecoder:     json.Unmarshal,
 		ProxyHeader:     fiber.HeaderXForwardedFor,
 		StructValidator: &structValidator{validate: validator.New()},
+		ErrorHandler:    model.RespInternalServerError,
 	})
 
 	// Use requestID middleware
@@ -46,6 +46,8 @@ func fiberAPP() *fiber.App {
 		Header:    fiber.HeaderXRequestID,
 		Generator: utils.UUIDv4,
 	}))
+
+	app.Use(recoverer.New())
 
 	// Use customer header middleware
 	app.Use(middleware.CustomHeader)
@@ -86,12 +88,12 @@ func fiberAPP() *fiber.App {
 
 // RunHTTPServer runs a HTTP server
 func RunHTTPServer() {
-	// Create fiber app
-	app = fiberAPP()
+	// Create Fiber app
+	app := fiberAPP()
 
-	// Use fiber as handler
+	// Use Fiber as handler
 	server := &http.Server{
-		Addr:    fmt.Sprintf("%s:%d", config.C.GetString("server.status.host"), config.C.GetInt("server.status.port")),
+		Addr:    fmt.Sprintf("%s:%d", config.Get().Server.Status.Host, config.Get().Server.Status.Port),
 		Handler: adaptor.FiberApp(app),
 	}
 
@@ -99,11 +101,11 @@ func RunHTTPServer() {
 
 	// Start HTTP server
 	go func() {
-		logger.L.Fatal(server.ListenAndServe().Error())
+		logger.L.Fatal("Failed to start main http service", zap.Error(server.ListenAndServe()))
 	}()
 
 	if config.Debug {
-		host := config.C.GetString("server.status.host")
+		host := config.Get().Server.Status.Host
 		if host == "" {
 			host = "[::]"
 		}
@@ -112,7 +114,7 @@ func RunHTTPServer() {
 			visit = "localhost"
 		}
 
-		logger.L.Info(fmt.Sprintf("HTTP Server is running on %s:%d", host, config.C.GetInt("server.status.port")))
-		logger.L.Debug(fmt.Sprintf("Visit status by http://%s:%d", visit, config.C.GetInt("server.status.port")))
+		logger.L.Info(fmt.Sprintf("HTTP Server is running on %s:%d", host, config.Get().Server.Status.Port))
+		logger.L.Debug(fmt.Sprintf("Visit status by %s:%d", visit, config.Get().Server.Status.Port))
 	}
 }

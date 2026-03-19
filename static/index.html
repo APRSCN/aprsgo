@@ -679,7 +679,7 @@
         }
     };
 
-    // Chart type labels also need internationalization
+    // Chart type labels also need internationalisation
     const graphTypeLabels = {
         en: [
             { value: 'uplinkPacketRX', label: 'Uplink Packets RX' },
@@ -1250,7 +1250,7 @@
                     fetchStats(),
                     fetchMOTD()
                 ]).then(() => {
-                    // Initialize chart after data is loaded
+                    // Initialise chart after data is loaded
                     initChart();
                     // Hide loading overlay after a short delay to ensure smooth transition
                     setTimeout(hideLoading, 500);

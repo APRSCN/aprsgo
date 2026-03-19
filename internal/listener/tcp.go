@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
+	"github.com/APRSCN/aprsgo/internal/env"
 	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/APRSCN/aprsgo/internal/model"
@@ -168,9 +169,9 @@ func (c *TCPAPRSClient) sendHeartbeatWithRetry() {
 
 		err := c.Send(fmt.Sprintf(
 			"# %s-%s %s %s %s",
-			config.ENName, config.Nickname, config.Version,
+			env.ENName, env.Nickname, env.Version,
 			time.Now().Format(time.RFC1123),
-			config.C.GetString("server.id"),
+			config.Get().Server.ID,
 		))
 		c.mu.Unlock()
 
@@ -377,14 +378,14 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 	c.startHeartbeat()
 
 	// Send welcome message
-	_ = c.Send(fmt.Sprintf("# %s %s/%s", config.ENName, config.Version, config.Nickname))
+	_ = c.Send(fmt.Sprintf("# %s %s/%s", env.ENName, env.Version, env.Nickname))
 
 	// Subscribe to data stream for this client
 	c.dataCh, c.unsubscribe = uplink.Stream.Subscribe()
 	go c.handleUplinkData()
 
 	lineCount := 0
-	reader := bufio.NewReaderSize(conn, config.C.GetInt("server.bufSize")*1024)
+	reader := bufio.NewReaderSize(conn, config.Get().Server.BuffSize*1024)
 	for {
 		// Add count
 		lineCount++
@@ -526,13 +527,13 @@ func (s *TCPAPRSServer) handleLogin(client *TCPAPRSClient, packet string) {
 	if aprsutils.Passcode(callSign) == intPasscode {
 		client.mu.Lock()
 		client.verified = true
-		_ = client.Send(fmt.Sprintf("# logresp %s verified, server %s", callSign, config.C.GetString("server.id")))
+		_ = client.Send(fmt.Sprintf("# logresp %s verified, server %s", callSign, config.Get().Server.ID))
 		logger.L.Info("Client logged in successfully",
 			zap.String("callsign", callSign),
 			zap.String("client", client.conn.RemoteAddr().String()))
 		client.mu.Unlock()
 	} else {
-		_ = client.Send(fmt.Sprintf("# logresp %s unverified, server %s", callSign, config.C.GetString("server.id")))
+		_ = client.Send(fmt.Sprintf("# logresp %s unverified, server %s", callSign, config.Get().Server.ID))
 		logger.L.Warn("Client login failed - invalid passcode",
 			zap.String("callsign", callSign),
 			zap.String("client", client.conn.RemoteAddr().String()))
@@ -586,7 +587,7 @@ func (s *TCPAPRSServer) handleAPRSData(c *TCPAPRSClient, packet string) {
 
 	// Process QConstruct for packet routing
 	qConfig := &qConstruct.QConfig{
-		ServerLogin:    config.C.GetString("server.id"),
+		ServerLogin:    config.Get().Server.ID,
 		ClientLogin:    c.callSign,
 		ConnectionType: qConstruct.ConnectionVerified,
 		EnableTrace:    false,

@@ -2,15 +2,12 @@ package uplink
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/APRSCN/aprsgo/internal/config"
+	"github.com/APRSCN/aprsgo/internal/env"
 	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/logger"
-	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsutils/client"
-	"github.com/ghinknet/json"
-	"go.uber.org/zap"
 )
 
 var Client *client.Client
@@ -30,11 +27,6 @@ func InitUplink() {
 	StatsBytesRX = historydb.NewMapFloat64History()
 	StatsBytesTX = historydb.NewMapFloat64History()
 
-	// Add config change trigger
-	config.OnChange = append(config.OnChange, func() {
-		reload()
-	})
-
 	// Start uplink
 	go selectUplink()
 
@@ -50,35 +42,25 @@ func selectUplink() {
 	// Reset flag
 	stop = false
 
-	// Load config
-	var uplinksConfig []*model.UplinkConfig
-	marshalled, err := json.Marshal(config.C.Get("server.uplinks"))
-	if err != nil {
-		logger.L.Error("Error loading uplinks config", zap.Error(err))
-		return
-	}
-	if err = json.Unmarshal(marshalled, &uplinksConfig); err != nil {
-		logger.L.Error("Error loading uplinks config", zap.Error(err))
-	}
-
 	defer Client.Close()
 	// Select available node with fallthrough
 	for !stop {
-		for _, uplink := range uplinksConfig {
+		for _, uplink := range config.Get().Server.Uplinks {
 			// Create client
 			Client = client.NewClient(
-				config.C.GetString("server.id"),
-				strconv.Itoa(config.C.GetInt("server.passcode")),
-				uplink.Mode, uplink.Protocol, uplink.Host, uplink.Port,
-				client.WithBufSize(config.C.GetInt("server.bufSize")*1024),
+				config.Get().Server.ID,
+				config.Get().Server.Passcode,
+				client.Mode(uplink.Mode), client.Protocol(uplink.Protocol),
+				uplink.Host, uplink.Port,
+				client.WithBufSize(config.Get().Server.BuffSize*1024),
 				client.WithLogger(&ZapLogger{logger: logger.L}),
 				client.WithSoftwareAndVersion(
-					fmt.Sprintf("%s-%s", config.ENName, config.Nickname), config.Version,
+					fmt.Sprintf("%s-%s", env.ENName, env.Nickname), env.Version,
 				),
 				client.WithHandler(recvHandler),
 			)
 			// Connect client
-			if err = Client.Connect(); err != nil {
+			if err := Client.Connect(); err != nil {
 				continue
 			}
 

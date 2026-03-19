@@ -30,5 +30,5 @@ func Stats(c fiber.Ctx) error {
 		break
 	}
 
-	return model.Resp(c, stats)
+	return model.RespSuccess(c, stats)
 }

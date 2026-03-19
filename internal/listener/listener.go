@@ -7,7 +7,6 @@ import (
 	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsutils/client"
-	"github.com/ghinknet/json"
 	"go.uber.org/zap"
 )
 
@@ -36,11 +35,6 @@ func InitListener() {
 	// Load init config
 	load()
 
-	// Add config change trigger
-	config.OnChange = append(config.OnChange, func() {
-		load()
-	})
-
 	// Start update daemon
 	go update()
 
@@ -57,18 +51,7 @@ func load() {
 	// Remove listeners
 	Listeners = make([]*Listener, 0)
 
-	// Load config
-	var listenersConfig []*model.ListenerConfig
-	marshalled, err := json.Marshal(config.C.Get("server.listeners"))
-	if err != nil {
-		logger.L.Error("Error loading listeners config", zap.Error(err))
-		return
-	}
-	if err = json.Unmarshal(marshalled, &listenersConfig); err != nil {
-		logger.L.Error("Error loading listeners config", zap.Error(err))
-	}
-
-	for _, listener := range listenersConfig {
+	for _, listener := range config.Get().Server.Listeners {
 		// TODO: Support more protocol
 		if listener.Protocol != "tcp" {
 			continue
@@ -91,7 +74,7 @@ func load() {
 		})
 
 		// Start server
-		if err = server.Start(fmt.Sprintf("%s:%d", listener.Host, listener.Port)); err != nil {
+		if err := server.Start(fmt.Sprintf("%s:%d", listener.Host, listener.Port)); err != nil {
 			logger.L.Error("Error starting server", zap.Error(err))
 		}
 	}

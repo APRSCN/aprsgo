@@ -1,13 +1,13 @@
 server:
-  # Buf size setting (KB)
-  bufSize: 128
+  # Buff size setting (KB)
+  buffSize: 128
   # Custom processor name
   # Only available when we can not get CPU info
   #  model:
   # Your server ID
   id: "N0CALL"
   # Passcode for the server ID
-  passcode: 0
+  passcode: "0"
   # Setting of http status panel
   status:
     host: "[::]"
@@ -59,9 +59,11 @@ server:
       protocol: "tcp"
       host: "rotate.aprs.net"
       port: 10152
+# Info of server admin
 admin:
   name: "Name, MYCALL"
   email: "email@example.com"
+# Config of system log
 log:
   file: "logs/app.log"
   maxSize: 100

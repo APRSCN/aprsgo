@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
+	"github.com/APRSCN/aprsgo/internal/env"
 	"github.com/APRSCN/aprsgo/internal/listener"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsgo/internal/system"
@@ -40,7 +41,7 @@ func Status(c fiber.Ctx) error {
 		break
 	}
 	if cpuModel == "" {
-		cpuModel = config.C.GetString("server.model")
+		cpuModel = config.Get().Server.Model
 	}
 
 	// Get uplink
@@ -121,18 +122,18 @@ func Status(c fiber.Ctx) error {
 		})
 	}
 
-	return model.Resp(c, model.ReturnStatus{
+	return model.RespSuccess(c, model.ReturnStatus{
 		Msg: "success",
 		Server: model.ReturnServer{
-			Admin:    config.C.GetString("admin.name"),
-			Email:    config.C.GetString("admin.email"),
+			Admin:    config.Get().Admin.Name,
+			Email:    config.Get().Admin.Email,
 			OS:       utils.PrettierOSName(),
 			Arch:     runtime.GOARCH,
-			ID:       config.C.GetString("server.id"),
-			Software: config.ENName,
-			Version:  fmt.Sprintf("%s %s", config.Version, config.Nickname),
+			ID:       config.Get().Server.ID,
+			Software: env.ENName,
+			Version:  fmt.Sprintf("%s %s", env.Version, env.Nickname),
 			Now:      timeNow,
-			Uptime:   timeNow.Sub(config.Uptime).Seconds(),
+			Uptime:   timeNow.Sub(env.StartAt).Seconds(),
 			Model:    cpuModel,
 			Percent:  system.Status.Percent,
 			Memory:   system.Status.Memory,
