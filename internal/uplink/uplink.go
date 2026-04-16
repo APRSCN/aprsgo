@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/APRSCN/aprsgo/internal/config"
-	"github.com/APRSCN/aprsgo/internal/env"
 	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/logger"
+	"github.com/APRSCN/aprsgo/internal/meta"
 	"github.com/APRSCN/aprsutils/client"
 )
 
@@ -55,7 +55,7 @@ func selectUplink() {
 				client.WithBufSize(config.Get().Server.BuffSize*1024),
 				client.WithLogger(&ZapLogger{logger: logger.L}),
 				client.WithSoftwareAndVersion(
-					fmt.Sprintf("%s-%s", env.ENName, env.Nickname), env.Version,
+					fmt.Sprintf("%s-%s", meta.ENName, meta.Nickname), meta.Version,
 				),
 				client.WithHandler(recvHandler),
 			)

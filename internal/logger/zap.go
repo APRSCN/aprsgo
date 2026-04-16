@@ -1,9 +1,11 @@
 package logger
 
 import (
+	"io"
 	"os"
 
 	"github.com/APRSCN/aprsgo/internal/config"
+	"github.com/goccy/go-json"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -34,6 +36,11 @@ func InitLogger() {
 		EncodeTime:     zapcore.ISO8601TimeEncoder,
 		EncodeDuration: zapcore.SecondsDurationEncoder,
 		EncodeCaller:   zapcore.ShortCallerEncoder,
+		NewReflectedEncoder: func(w io.Writer) zapcore.ReflectedEncoder {
+			enc := json.NewEncoder(w)
+			enc.SetEscapeHTML(false)
+			return enc
+		},
 	}
 
 	cores := make([]zapcore.Core, 0)

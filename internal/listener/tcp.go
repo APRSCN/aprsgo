@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
-	"github.com/APRSCN/aprsgo/internal/env"
 	"github.com/APRSCN/aprsgo/internal/historydb"
 	"github.com/APRSCN/aprsgo/internal/logger"
+	"github.com/APRSCN/aprsgo/internal/meta"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsgo/internal/uplink"
 	"github.com/APRSCN/aprsutils"
@@ -169,7 +169,7 @@ func (c *TCPAPRSClient) sendHeartbeatWithRetry() {
 
 		err := c.Send(fmt.Sprintf(
 			"# %s-%s %s %s %s",
-			env.ENName, env.Nickname, env.Version,
+			meta.ENName, meta.Nickname, meta.Version,
 			time.Now().Format(time.RFC1123),
 			config.Get().Server.ID,
 		))
@@ -378,7 +378,7 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 	c.startHeartbeat()
 
 	// Send welcome message
-	_ = c.Send(fmt.Sprintf("# %s %s/%s", env.ENName, env.Version, env.Nickname))
+	_ = c.Send(fmt.Sprintf("# %s %s/%s", meta.ENName, meta.Version, meta.Nickname))
 
 	// Subscribe to data stream for this client
 	c.dataCh, c.unsubscribe = uplink.Stream.Subscribe()

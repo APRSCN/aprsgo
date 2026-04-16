@@ -8,8 +8,6 @@ import (
 	"github.com/APRSCN/aprsgo/internal/logger"
 	"github.com/APRSCN/aprsgo/internal/system"
 	"github.com/APRSCN/aprsgo/internal/uplink"
-
-	"go.uber.org/zap"
 )
 
 func main() {
@@ -21,9 +19,7 @@ func main() {
 
 	// Init logger
 	logger.InitLogger()
-	defer func(L *zap.Logger) {
-		_ = L.Sync()
-	}(logger.L)
+	defer func() { _ = logger.L.Sync() }()
 
 	// Init system daemon
 	system.InitSystem()

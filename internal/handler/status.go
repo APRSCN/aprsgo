@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
-	"github.com/APRSCN/aprsgo/internal/env"
 	"github.com/APRSCN/aprsgo/internal/listener"
+	"github.com/APRSCN/aprsgo/internal/meta"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsgo/internal/system"
 	"github.com/APRSCN/aprsgo/internal/uplink"
@@ -130,10 +130,10 @@ func Status(c fiber.Ctx) error {
 			OS:       utils.PrettierOSName(),
 			Arch:     runtime.GOARCH,
 			ID:       config.Get().Server.ID,
-			Software: env.ENName,
-			Version:  fmt.Sprintf("%s %s", env.Version, env.Nickname),
+			Software: meta.ENName,
+			Version:  fmt.Sprintf("%s %s", meta.Version, meta.Nickname),
 			Now:      timeNow,
-			Uptime:   timeNow.Sub(env.StartAt).Seconds(),
+			Uptime:   timeNow.Sub(meta.StartAt).Seconds(),
 			Model:    cpuModel,
 			Percent:  system.Status.Percent,
 			Memory:   system.Status.Memory,
