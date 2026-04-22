@@ -3,17 +3,17 @@ module github.com/APRSCN/aprsgo
 go 1.26.2
 
 require (
-	github.com/APRSCN/aprsutils v1.2.7
-	github.com/ghinknet/json v1.1.1
-	github.com/ghinknet/toolbox v1.10.0
+	github.com/APRSCN/aprsutils v1.2.8
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/goccy/go-json v0.10.6
-	github.com/gofiber/contrib/v3/zap v1.0.1
+	github.com/gofiber/contrib/v3/zap v1.0.2
 	github.com/gofiber/fiber/v3 v3.1.0
-	github.com/gofiber/utils/v2 v2.0.2
+	github.com/gofiber/utils/v2 v2.0.4
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shirou/gopsutil/v4 v4.26.3
 	github.com/spf13/viper v1.21.0
+	go.gh.ink/json v1.1.2
+	go.gh.ink/toolbox v1.11.2
 	go.uber.org/zap v1.27.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
@@ -27,12 +27,11 @@ require (
 	github.com/ebitengine/purego v0.10.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
-	github.com/ghinknet/regexp v1.0.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
-	github.com/gofiber/schema v1.7.0 // indirect
+	github.com/gofiber/schema v1.7.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.18.5 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
@@ -55,6 +54,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.70.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
+	go.gh.ink/regexp v1.0.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.26.0 // indirect
