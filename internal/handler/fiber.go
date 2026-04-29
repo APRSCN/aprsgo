@@ -14,7 +14,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"github.com/gofiber/utils/v2"
 	"go.gh.ink/json"
-	"go.gh.ink/toolbox/expr"
+	"go.gh.ink/toolbox/fiber/v3/ip"
 	"go.uber.org/zap"
 )
 
@@ -68,7 +68,7 @@ func fiberAPP() *fiber.App {
 		Fields: []string{"ip", "ips", "latency", "status", "method", "url", "requestId", "ua"},
 		FieldsFunc: func(c fiber.Ctx) []zap.Field {
 			return []zap.Field{
-				zap.String("client", expr.Ternary(len(c.IPs()) > 0, c.IPs(), []string{c.IP()})[0]),
+				zap.String("client", ip.GetIP(c)),
 			}
 		},
 	}))

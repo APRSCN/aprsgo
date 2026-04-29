@@ -9,26 +9,28 @@ import (
 	"go.uber.org/zap"
 )
 
+type response[T any] struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"`
+	Data T      `json:"data"`
+}
+
 // Resp is the basic resp method to return data
-func Resp(c fiber.Ctx, httpCode int, statusCode int, data any, msg string) error {
-	type response struct {
-		Code int    `json:"code"`
-		Data any    `json:"data"`
-		Msg  string `json:"msg"`
-	}
-	return c.Status(httpCode).JSON(response{statusCode, data, msg})
+func Resp[T any](c fiber.Ctx, httpCode int, statusCode int, data T, msg string) error {
+
+	return c.Status(httpCode).JSON(response[T]{statusCode, msg, data})
 }
 
 // --------------- 200 ---------------
 
-func RespSuccess(c fiber.Ctx, data any) error {
+func RespSuccess[T any](c fiber.Ctx, data T) error {
 	return Resp(c, http.StatusOK, 0, data, "success")
 }
 
 // --------------- 400 ---------------
 
 func RespNotFound(c fiber.Ctx) error {
-	return Resp(c, http.StatusNotFound, 0, nil, "not found")
+	return Resp(c, http.StatusNotFound, 0, any(nil), "not found")
 }
 
 // --------------- 500 ---------------
@@ -40,5 +42,5 @@ func RespInternalServerError(c fiber.Ctx, err error) error {
 		zap.Error(err),
 		zap.String("requestID", requestID),
 	)
-	return Resp(c, http.StatusInternalServerError, 0, nil, "internal server error")
+	return Resp(c, http.StatusInternalServerError, 0, any(nil), "internal server error")
 }

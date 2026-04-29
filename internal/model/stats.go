@@ -1,5 +1,7 @@
 package model
 
+// TODO: preheat in sonic
+
 // Statistics holds all statistics data
 type Statistics struct {
 	SentPackets     uint64 `json:"sentPackets"`
