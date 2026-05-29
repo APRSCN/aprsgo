@@ -2,6 +2,7 @@ package handler
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/APRSCN/aprsgo/internal/config"
 	"github.com/APRSCN/aprsgo/internal/logger"
@@ -28,7 +29,7 @@ func (v *structValidator) Validate(out any) error {
 	return v.validate.Struct(out)
 }
 
-// fiberAPP provides a fiber app
+// fiberAPP provides a GoFiber app
 func fiberAPP() *fiber.App {
 	app := fiber.New(fiber.Config{
 		JSONEncoder:     json.Marshal,
@@ -38,6 +39,9 @@ func fiberAPP() *fiber.App {
 		ErrorHandler:    model.RespInternalServerError,
 	})
 
+	// Use recoverer
+	app.Use(recoverer.New())
+
 	// Use requestID middleware
 	app.Use(requestid.New(requestid.Config{
 		Next:      nil,
@@ -45,10 +49,31 @@ func fiberAPP() *fiber.App {
 		Generator: utils.UUIDv4,
 	}))
 
-	app.Use(recoverer.New())
+	// Use global logger
+	app.Use(fiberzap.New(fiberzap.Config{
+		Logger:   logger.L,
+		SkipURIs: []string{"/ping"},
+		Fields:   []string{"ip", "ips", "latency", "status", "method", "url", "requestId", "ua"},
+		FieldsFunc: func(c fiber.Ctx) []zap.Field {
+			return []zap.Field{
+				zap.String("client", ip.GetIP(c)),
+			}
+		},
+	}))
 
 	// Use customer header middleware
 	app.Use(middleware.CustomHeader)
+
+	// Ping test router handler
+	app.All("/ping", func(c fiber.Ctx) error {
+		return model.RespSuccess(c, struct {
+			Msg   string  `json:"msg"`
+			Stamp float64 `json:"stamp"`
+		}{
+			Msg:   "pong",
+			Stamp: float64(time.Now().UnixNano()) / 1e9,
+		})
+	})
 
 	// Status info handler
 	app.Get("/status", Status)
@@ -62,17 +87,6 @@ func fiberAPP() *fiber.App {
 	// Logo
 	app.Get("/logo.svg", logo)
 
-	// Use global logger
-	app.Use(fiberzap.New(fiberzap.Config{
-		Logger: logger.L,
-		Fields: []string{"ip", "ips", "latency", "status", "method", "url", "requestId", "ua"},
-		FieldsFunc: func(c fiber.Ctx) []zap.Field {
-			return []zap.Field{
-				zap.String("client", ip.GetIP(c)),
-			}
-		},
-	}))
-
 	// Static service
 	app.Get("/", index)
 
@@ -84,16 +98,20 @@ func fiberAPP() *fiber.App {
 	return app
 }
 
-// RunHTTPServer runs a HTTP server
-func RunHTTPServer() {
+// Run runs an HTTP server in a goroutine
+func Run() *fiber.App {
 	// Create Fiber app
 	app := fiberAPP()
 
 	addr := fmt.Sprintf("%s:%d", config.Get().Server.Status.Host, config.Get().Server.Status.Port)
 
-	// Start HTTP server with Fiber native listener
+	// Start HTTP server with GoFiber native listener in a goroutine
 	go func() {
-		logger.L.Fatal("Failed to start main http service", zap.Error(app.Listen(addr)))
+		if err := app.Listen(addr, fiber.ListenConfig{
+			DisableStartupMessage: true,
+		}); err != nil {
+			logger.L.Error("Failed to start HTTP server", zap.Error(err))
+		}
 	}()
 
 	if config.Debug {
@@ -102,11 +120,13 @@ func RunHTTPServer() {
 			host = "[::]"
 		}
 		visit := host
-		if host == "0.0.0.0" || host == "[::]" {
+		if host == "[::]" || host == "0.0.0.0" {
 			visit = "localhost"
 		}
 
-		logger.L.Info(fmt.Sprintf("HTTP Server is running on %s:%d", host, config.Get().Server.Status.Port))
-		logger.L.Debug(fmt.Sprintf("Visit status by %s:%d", visit, config.Get().Server.Status.Port))
+		logger.L.Info(fmt.Sprintf("Server is running on %s:%d", host, config.Get().Server.Status.Port))
+		logger.L.Debug(fmt.Sprintf("Visit by %s:%d", visit, config.Get().Server.Status.Port))
 	}
+
+	return app
 }

@@ -13,8 +13,8 @@ import (
 var Client *client.Client
 var stop = false
 
-// InitUplink inits uplink daemon
-func InitUplink() {
+// Init inits uplink daemon
+func Init() {
 	// Init Stream
 	Stream = NewDataStream(100)
 

@@ -13,7 +13,7 @@ import (
 
 var L *zap.Logger
 
-func InitLogger() {
+func Init() {
 	// Set log level
 	var level zapcore.Level
 	if config.Debug {
@@ -77,5 +77,9 @@ func InitLogger() {
 	// Create zap logger
 	L = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
 
-	L.Debug("Logger initialized")
+	L.Debug("logger initialized")
+}
+
+func Cleanup() {
+	_ = L.Sync()
 }

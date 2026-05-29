@@ -90,8 +90,8 @@ func Daemon() {
 	}
 }
 
-// InitSystem inits system daemon
-func InitSystem() {
+// Init inits system daemon
+func Init() {
 	// Init stats
 	StatsMemory = historydb.NewMapFloat64History()
 

@@ -30,8 +30,8 @@ type Listener struct {
 // Listeners records all listeners
 var Listeners = make([]*Listener, 0)
 
-// InitListener inits listener daemon
-func InitListener() {
+// Init inits listener daemon
+func Init() {
 	// Load init config
 	load()
 

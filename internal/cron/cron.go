@@ -1,21 +1,23 @@
 package cron
 
 import (
+	"time"
+
 	"github.com/APRSCN/aprsgo/internal/logger"
-	"github.com/robfig/cron/v3"
+	"github.com/go-co-op/gocron"
 )
 
-var C *cron.Cron
+var C *gocron.Scheduler
 
-// InitCron inits global cron object
-func InitCron() {
-	C = cron.New()
+// Init inits global cron object
+func Init() {
+	C = gocron.NewScheduler(time.Local)
 
 	registerDefault()
 
-	C.Start()
+	C.StartAsync()
 
-	logger.L.Debug("Cron initialized")
+	logger.L.Debug("cron initialized")
 }
 
 // registerDefault registers default cron tasks
