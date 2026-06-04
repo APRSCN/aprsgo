@@ -1,36 +1,41 @@
 package model
 
-// TODO: preheat in sonic
+import (
+	"reflect"
+
+	"go.gh.ink/json"
+)
 
 // Statistics holds all statistics data
 type Statistics struct {
-	SentPackets     uint64 `json:"sentPackets"`
-	ReceivedPackets uint64 `json:"receivedPackets"`
-	ReceivedDups    uint64 `json:"receivedDups"`
-	ReceivedErrors  uint64 `json:"receivedErrors"`
-	ReceivedQDrop   uint64 `json:"receivedQDrop"`
-	SentBytes       uint64 `json:"sentBytes"`
-	ReceivedBytes   uint64 `json:"receivedBytes"`
+	SentPackets     uint64 `json:"sent_packets"`
+	ReceivedPackets uint64 `json:"received_packets"`
+	ReceivedDups    uint64 `json:"received_dups"`
+	ReceivedErrors  uint64 `json:"received_errors"`
+	ReceivedQDrop   uint64 `json:"received_q_drop"`
+	SentBytes       uint64 `json:"sent_bytes"`
+	ReceivedBytes   uint64 `json:"received_bytes"`
 
 	// Rates (packets per second)
-	SendPacketRate uint64 `json:"sendPacketRate"`
-	RecvPacketRate uint64 `json:"recvPacketRate"`
-	SendByteRate   uint64 `json:"sendByteRate"`
-	RecvByteRate   uint64 `json:"recvByteRate"`
-
-	// Internal counters for rate calculation
-	LastSentPackets     uint64
-	LastReceivedPackets uint64
-	LastSentBytes       uint64
-	LastReceivedBytes   uint64
+	SendPacketRate uint64 `json:"send_packet_rate"`
+	RecvPacketRate uint64 `json:"recv_packet_rate"`
+	SendByteRate   uint64 `json:"send_byte_rate"`
+	RecvByteRate   uint64 `json:"recv_byte_rate"`
 }
 
 // StatsReturn provides a struct to return stats of server
 type StatsReturn struct {
 	Msg            string   `json:"msg"`
 	Memory         [][2]any `json:"memory"`
-	UplinkPacketRX [][2]any `json:"uplinkPacketRX"`
-	UplinkPacketTX [][2]any `json:"uplinkPacketTX"`
-	UplinkBytesRX  [][2]any `json:"uplinkBytesRX"`
-	UplinkBytesTX  [][2]any `json:"uplinkBytesTX"`
+	UplinkPacketRX [][2]any `json:"uplink_packet_rx"`
+	UplinkPacketTX [][2]any `json:"uplink_packet_tx"`
+	UplinkBytesRX  [][2]any `json:"uplink_bytes_rx"`
+	UplinkBytesTX  [][2]any `json:"uplink_bytes_tx"`
+}
+
+func init() {
+	_ = json.PreheatMany([]reflect.Type{
+		reflect.TypeOf(Statistics{}),
+		reflect.TypeOf(StatsReturn{}),
+	})
 }

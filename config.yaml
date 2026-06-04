@@ -1,6 +1,6 @@
 server:
   # Buff size setting (KB)
-  buffSize: 128
+  buff_size: 128
   # Custom processor name
   # Only available when we can not get CPU info
   #  model:
@@ -8,12 +8,42 @@ server:
   id: "N0CALL"
   # Passcode for the server ID
   passcode: "0"
+
+  # Global maximum simultaneous clients across all listeners (0 = unlimited).
+  max_clients: 0
+  # Idle disconnect timeout for clients, in seconds (0 = built-in default 60).
+  client_timeout: 0
+  # Time a connection may stay open without logging in, in seconds
+  # (0 = built-in default 30).
+  login_timeout: 0
+  # Idle disconnect timeout for the upstream uplink, in seconds
+  # (0 = built-in default 30).
+  upstream_timeout: 0
+
+  # Security toggles.
+  # Drop relayed packets from unverified (bad/no passcode) clients. They may
+  # still query the server and have their own position recorded.
+  disallow_unverified: false
+  # Accepted q-construct protocol id letter (default "A").
+  q_protocol_id: "A"
+  # Drop packets whose q-construct uses a different protocol id.
+  disallow_other_q_protocols: false
+  # Reject logins whose callsign matches any of these globs (case-insensitive).
+  #  disallow_login_call:
+  #    - "N0CALL"
+  #    - "NOCALL"
+  # Drop packets whose source callsign matches any of these globs
+  # (N0CALL / NOCALL / SERVER are always rejected).
+  #  disallow_source_call:
+  #    - "MYCALL-*"
+
   # Setting of http status panel
   status:
     host: "[::]"
     port: 14501
   # Setting of aprs server
-  # Mode: fullfeed [Everything] / igate [IGate / Client Port]
+  # Mode: fullfeed [Everything] / igate [IGate / Client Port] /
+  #       dupefeed [Everything incl. duplicates, receive-only, hidden]
   listeners:
     -
       name: "Full Feed"
@@ -22,6 +52,14 @@ server:
       host: "[::]"
       port: 10152
       visible: "hidden"
+      # Per-listener overrides (all optional):
+      #  max_clients: 200        # cap clients on this port (0 = global cap)
+      #  ibuf_size: 128          # input reader buffer, KB (0 = global buff_size)
+      #  obuf_size: 256          # output queue size, KB (0 = global buff_size)
+      #  acl:                    # ordered allow/deny rules; default deny when set
+      #    - "allow 10.0.0.0/8"
+      #    - "allow 2001:db8::/32"
+      #    - "deny 0.0.0.0/0"
   #    - name: "Full Feed"
   #      mode: "fullfeed"
   #      protocol: "udp"
@@ -33,6 +71,23 @@ server:
       protocol: "tcp"
       host: "[::]"
       port: 14580
+  #    - name: "APRS-IS over TLS"
+  #      mode: "igate"
+  #      protocol: "tcp"
+  #      host: "[::]"
+  #      port: 24580
+  #      tls: true
+  #      cert: "certs/server.crt"
+  #      key: "certs/server.key"
+  #      # Optional: verify client certificates against this CA. A client whose
+  #      # certificate (callsign in its CN or amateur-radio OID) matches its
+  #      # login is accepted as verified without a passcode.
+  #      client_ca: "certs/client-ca.crt"
+  #    - name: "APRS-IS over SCTP (Linux only)"
+  #      mode: "igate"
+  #      protocol: "sctp"
+  #      host: "[::]"
+  #      port: 14581
   #    - name: "Client-Defined Filters"
   #      mode: "igate"
   #      protocol: "udp"
@@ -50,6 +105,11 @@ server:
   #      host: "[::]"
   #      port: 20350
   #      filter: "m/350"
+  #    - name: "Dupe Feed (debug)"
+  #      mode: "dupefeed"
+  #      protocol: "tcp"
+  #      host: "[::]"
+  #      port: 10153
   # Setting of uplink
   # Mode: full [Full Feed] / ro [Read-Only]
   uplinks:
@@ -59,6 +119,39 @@ server:
       protocol: "tcp"
       host: "rotate.aprs.net"
       port: 10152
+  # Core peers: server-to-server links exchanging raw APRS lines.
+  # 'host'/'port' is the LOCAL bind address (UDP socket and/or TCP listener,
+  # depending on the peers' transports). Each peer chooses its own transport
+  # via 'protocol' (udp default, or tcp); a group may mix both.
+  # Leave 'peers' empty to disable peering.
+  peer:
+    host: "[::]"
+    port: 0
+    peers: []
+  #  host: "[::]"
+  #  port: 16404
+  #  peers:
+  #    - name: "Partner (UDP)"
+  #      id: "SRV1"
+  #      host: "192.0.2.10"
+  #      port: 16405
+  #      protocol: "udp"
+  #    - name: "Partner (TCP)"
+  #      id: "SRV2"
+  #      host: "192.0.2.11"
+  #      port: 16406
+  #      protocol: "tcp"
+  # Multiple independent mesh groups (each with its own local bind + peers):
+  #  peergroups:
+  #    - name: "Region A"
+  #      host: "[::]"
+  #      port: 16404
+  #      peers:
+  #        - name: "Partner A"
+  #          id: "SRVA"
+  #          host: "192.0.2.10"
+  #          port: 16404
+  #          protocol: "tcp"
 # Info of server admin
 admin:
   name: "Name, MYCALL"
@@ -66,7 +159,7 @@ admin:
 # Config of system log
 log:
   file: "logs/app.log"
-  maxSize: 100
-  maxBackups: 10
-  maxAge: 30
+  max_size: 100
+  max_backups: 10
+  max_age: 30
   compress: true

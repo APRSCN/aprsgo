@@ -3,17 +3,31 @@ package system
 import (
 	"os"
 	"runtime"
+	"sync/atomic"
 	"time"
 
-	"github.com/APRSCN/aprsgo/internal/historydb"
-	"github.com/APRSCN/aprsgo/internal/logger"
+	"github.com/APRSCN/aprsgo/internal/infra/logger"
 	"github.com/APRSCN/aprsgo/internal/model"
+	"github.com/APRSCN/aprsgo/internal/pkg/historydb"
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/shirou/gopsutil/v4/process"
 )
 
-var Status model.SystemStatus
+// status holds the latest system status behind an atomic pointer so the
+// daemon can publish a fresh snapshot while the status HTTP handler reads it
+// concurrently without a data race.
+var status atomic.Pointer[model.SystemStatus]
+
+// Snapshot returns the latest system status (zero value until the daemon has
+// published its first sample).
+func Snapshot() model.SystemStatus {
+	if p := status.Load(); p != nil {
+		return *p
+	}
+	return model.SystemStatus{}
+}
+
 var StatsMemory *historydb.MapFloat64History
 
 // Daemon is the system daemon
@@ -24,10 +38,13 @@ func Daemon() {
 		// Get time now
 		now := time.Now()
 		var cpuPercent, memTotal, memUsed float64
-		// Get CPU percent
+
+		// Get CPU per cent (cpu.Percent blocks for the sample interval, so this
+		// loop is naturally paced; back off on error to avoid a tight spin).
 		for {
 			percent, err := cpu.Percent(time.Second, false)
-			if err != nil {
+			if err != nil || len(percent) == 0 {
+				time.Sleep(time.Second)
 				continue
 			}
 			cpuPercent = percent[0]
@@ -38,6 +55,7 @@ func Daemon() {
 		for {
 			memInfo, err := mem.VirtualMemory()
 			if err != nil {
+				time.Sleep(time.Second)
 				continue
 			}
 			memTotal = float64(memInfo.Total) / 1024 / 1024
@@ -48,17 +66,19 @@ func Daemon() {
 		// Get self memory status
 		p, err := process.NewProcess(int32(os.Getpid()))
 		if err != nil {
+			time.Sleep(time.Second)
 			continue
 		}
 		memInfo, err := p.MemoryInfo()
 		if err != nil {
+			time.Sleep(time.Second)
 			continue
 		}
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
 
-		// Build the data
-		Status = model.SystemStatus{
+		// Build and publish the snapshot atomically.
+		snap := model.SystemStatus{
 			Percent: cpuPercent,
 			Memory: model.Memory{
 				Total:             memTotal,
@@ -77,10 +97,11 @@ func Daemon() {
 				Lookups:           m.Lookups,
 			},
 		}
+		status.Store(&snap)
 
 		if now.Sub(lastHistoryDBRecord) >= time.Minute {
 			// Record new data
-			StatsMemory.Record(float64(now.UnixNano())/1e9, Status.Memory.Self)
+			StatsMemory.Record(float64(now.UnixNano())/1e9, snap.Memory.Self)
 
 			// ClearByValue expired data
 			StatsMemory.ClearByKey(30 * 24 * 60 * 60)

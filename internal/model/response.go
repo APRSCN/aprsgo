@@ -3,7 +3,7 @@ package model
 import (
 	"net/http"
 
-	"github.com/APRSCN/aprsgo/internal/logger"
+	"github.com/APRSCN/aprsgo/internal/infra/logger"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/requestid"
 	"go.uber.org/zap"
@@ -17,7 +17,6 @@ type response[T any] struct {
 
 // Resp is the basic resp method to return data
 func Resp[T any](c fiber.Ctx, httpCode int, statusCode int, data T, msg string) error {
-
 	return c.Status(httpCode).JSON(response[T]{statusCode, msg, data})
 }
 

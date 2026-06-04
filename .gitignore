@@ -1,4 +1,6 @@
 dists
+static
+aprsgo
 config_debug.yaml
 
 # ---> Go
