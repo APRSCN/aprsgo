@@ -11,7 +11,9 @@ server:
 
   # Global maximum simultaneous clients across all listeners (0 = unlimited).
   max_clients: 0
-  # Idle disconnect timeout for clients, in seconds (0 = built-in default 60).
+  # Idle disconnect timeout for clients, in seconds (0 = built-in default of
+  # 48 hours). Liveness is enforced by TCP keepalive, so this is intentionally
+  # long; lower it only if you want to drop quiet stations sooner.
   client_timeout: 0
   # Time a connection may stay open without logging in, in seconds
   # (0 = built-in default 30).

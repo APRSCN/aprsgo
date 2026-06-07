@@ -32,6 +32,7 @@ export interface ServerInfo {
   arch: string
   id: string
   software: string
+  codename: string
   version: string
   now: string
   uptime: number
@@ -97,6 +98,7 @@ export interface ClientInfo {
   addr: string
   uptime: string
   last: string
+  last_tx: string
   software: string
   version: string
   filter: string

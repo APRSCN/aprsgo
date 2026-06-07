@@ -17,6 +17,7 @@
   "totals.positionCache": "位置缓存",
 
   "server.title": "服务器",
+  "server.version": "版本",
   "server.admin": "管理员",
   "server.email": "邮箱",
   "server.osArch": "系统 / 架构",
@@ -83,6 +84,7 @@
   "clients.no": "否",
   "clients.up": "在线",
   "clients.lastIn": "最后接收",
+  "clients.lastOut": "最后发送",
   "clients.software": "软件",
   "clients.pktsTx": "发送包",
   "clients.pktsRxDupErr": "接收/重复/错误",

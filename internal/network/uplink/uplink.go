@@ -8,7 +8,7 @@ import (
 	"github.com/APRSCN/aprsgo/internal/infra/config"
 	"github.com/APRSCN/aprsgo/internal/infra/logger"
 	"github.com/APRSCN/aprsgo/internal/meta"
-	historydb2 "github.com/APRSCN/aprsgo/internal/pkg/historydb"
+	"github.com/APRSCN/aprsgo/internal/pkg/historydb"
 	"github.com/APRSCN/aprsgo/internal/wait"
 	"github.com/APRSCN/aprsutils/client"
 	"go.uber.org/zap"
@@ -144,13 +144,13 @@ func Init() {
 	Stream = NewDataStream(100)
 
 	// Init dupRecords
-	dupRecords = historydb2.NewDupeChecker(time.Second)
+	dupRecords = historydb.NewDupeChecker(time.Second)
 
 	// Init stats
-	StatsPacketRX = historydb2.NewMapFloat64History()
-	StatsPacketTX = historydb2.NewMapFloat64History()
-	StatsBytesRX = historydb2.NewMapFloat64History()
-	StatsBytesTX = historydb2.NewMapFloat64History()
+	StatsPacketRX = historydb.NewMapFloat64History()
+	StatsPacketTX = historydb.NewMapFloat64History()
+	StatsBytesRX = historydb.NewMapFloat64History()
+	StatsBytesTX = historydb.NewMapFloat64History()
 
 	armStop()
 	startManagers()

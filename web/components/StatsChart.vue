@@ -28,9 +28,14 @@ function buildOption() {
           }
         : undefined,
     },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    grid: { left: '3%', right: '4%', bottom: 60, containLabel: true },
     xAxis: { type: 'time', boundaryGap: false },
     yAxis: { type: 'value', boundaryGap: [0, '100%'] },
+    // Time-range zoom: drag the slider or scroll/pinch inside the chart.
+    dataZoom: [
+      { type: 'inside', throttle: 50 },
+      { type: 'slider', bottom: 10, height: 20 },
+    ],
     series: [
       {
         name: props.title,
@@ -99,5 +104,5 @@ onUnmounted(() => {
 
 <template>
   <!-- Rendered always; ECharts itself is imported client-side only. -->
-  <div ref="el" class="h-64 w-full"></div>
+  <div ref="el" class="h-80 w-full"></div>
 </template>

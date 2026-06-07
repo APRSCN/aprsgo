@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	config2 "github.com/APRSCN/aprsgo/internal/infra/config"
+	"github.com/APRSCN/aprsgo/internal/infra/config"
 	"github.com/APRSCN/aprsgo/internal/infra/logger"
 	"github.com/APRSCN/aprsgo/internal/network/uplink"
 	"github.com/APRSCN/aprsgo/internal/wait"
@@ -185,20 +185,20 @@ func Init() {
 
 // configuredGroups returns the union of the legacy single-group config and the
 // peergroups list (groups with no peers are skipped by the caller).
-func configuredGroups() []config2.PeerGroupConfig {
-	var groups []config2.PeerGroupConfig
-	if legacy := config2.Get().Server.Peer; len(legacy.Peers) > 0 {
+func configuredGroups() []config.PeerGroupConfig {
+	var groups []config.PeerGroupConfig
+	if legacy := config.Get().Server.Peer; len(legacy.Peers) > 0 {
 		if legacy.Name == "" {
 			legacy.Name = "default"
 		}
 		groups = append(groups, legacy)
 	}
-	groups = append(groups, config2.Get().Server.PeerGroups...)
+	groups = append(groups, config.Get().Server.PeerGroups...)
 	return groups
 }
 
 // buildManager resolves a group's peer addresses into a Manager.
-func buildManager(gc config2.PeerGroupConfig) *Manager {
+func buildManager(gc config.PeerGroupConfig) *Manager {
 	m := &Manager{name: gc.Name, bindHost: gc.Host, bindPort: gc.Port, stop: make(chan struct{})}
 	for _, p := range gc.Peers {
 		hostport := fmt.Sprintf("%s:%d", p.Host, p.Port)
@@ -506,7 +506,7 @@ func (m *Manager) injectFromPeer(packet string, src *remotePeer) {
 	// existing q construct is preserved, qAI traces get the server appended,
 	// and loop detection applies.
 	qConfig := &qConstruct.QConfig{
-		ServerLogin:    config2.Get().Server.ID,
+		ServerLogin:    config.Get().Server.ID,
 		ClientLogin:    src.id,
 		ConnectionType: qConstruct.ConnectionOutboundServer,
 		IsVerified:     true,

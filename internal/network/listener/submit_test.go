@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	config2 "github.com/APRSCN/aprsgo/internal/infra/config"
+	"github.com/APRSCN/aprsgo/internal/infra/config"
 	"github.com/APRSCN/aprsgo/internal/network/uplink"
 )
 
@@ -63,7 +63,7 @@ func TestParseSubmitEnvelope(t *testing.T) {
 // TestSubmitEnvelopeInjectsUDP verifies a UDP submit produces a qAU construct
 // and the packet reaches the distribution stream.
 func TestSubmitEnvelopeInjectsUDP(t *testing.T) {
-	config2.Set(testConfig())
+	config.Set(testConfig())
 	uplink.Stream = uplink.NewDataStream(10)
 	ch, unsub := uplink.Stream.Subscribe()
 	defer unsub()
@@ -96,7 +96,7 @@ func TestSubmitEnvelopeInjectsUDP(t *testing.T) {
 
 // TestSubmitEnvelopeInjectsHTTP verifies an HTTP submit produces a qAC construct.
 func TestSubmitEnvelopeInjectsHTTP(t *testing.T) {
-	config2.Set(testConfig())
+	config.Set(testConfig())
 	uplink.Stream = uplink.NewDataStream(10)
 	ch, unsub := uplink.Stream.Subscribe()
 	defer unsub()
@@ -127,7 +127,7 @@ func TestSubmitEnvelopeInjectsHTTP(t *testing.T) {
 }
 
 func TestSubmitEnvelopeRejectsBadPasscode(t *testing.T) {
-	config2.Set(testConfig())
+	config.Set(testConfig())
 	uplink.Stream = uplink.NewDataStream(10)
 
 	_, err := SubmitEnvelope("user TEST pass 1 vers sw 1.0\r\nTEST>APRS:>x\r\n", SubmitUDP)
@@ -137,8 +137,8 @@ func TestSubmitEnvelopeRejectsBadPasscode(t *testing.T) {
 }
 
 // testConfig returns a minimal config with a server ID for submit tests.
-func testConfig() config2.StaticConfig {
-	var c config2.StaticConfig
+func testConfig() config.StaticConfig {
+	var c config.StaticConfig
 	c.Server.ID = "TESTING"
 	c.Server.BuffSize = 128
 	return c

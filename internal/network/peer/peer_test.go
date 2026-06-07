@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	config2 "github.com/APRSCN/aprsgo/internal/infra/config"
+	"github.com/APRSCN/aprsgo/internal/infra/config"
 	"github.com/APRSCN/aprsgo/internal/infra/logger"
 	"github.com/APRSCN/aprsgo/internal/network/uplink"
 	"github.com/APRSCN/aprsutils/parser"
@@ -24,8 +24,8 @@ func parsePkt(t *testing.T, raw string) parser.Parsed {
 	return p
 }
 
-func testConfig() config2.StaticConfig {
-	var c config2.StaticConfig
+func testConfig() config.StaticConfig {
+	var c config.StaticConfig
 	c.Server.ID = "TESTING"
 	c.Server.BuffSize = 128
 	return c
@@ -47,7 +47,7 @@ func newManager(t *testing.T, peerAddr *net.UDPAddr) *Manager {
 // into the distribution stream (tagged as a peer source) and q-processed.
 func TestPeerInboundInjectsToStream(t *testing.T) {
 	logger.L = zap.NewNop()
-	config2.Set(testConfig())
+	config.Set(testConfig())
 	uplink.Stream = uplink.NewDataStream(10)
 	ch, unsub := uplink.Stream.Subscribe()
 	defer unsub()
@@ -88,7 +88,7 @@ func TestPeerInboundInjectsToStream(t *testing.T) {
 // configured peer, and that uplink/peer-sourced packets are NOT.
 func TestPeerOutboundRelay(t *testing.T) {
 	logger.L = zap.NewNop()
-	config2.Set(testConfig())
+	config.Set(testConfig())
 	uplink.Stream = uplink.NewDataStream(10)
 
 	// Fake remote peer to receive relayed packets.
@@ -129,7 +129,7 @@ func TestPeerOutboundRelay(t *testing.T) {
 // that connection is injected into the stream tagged as a peer source.
 func TestPeerTCPRelayAndInject(t *testing.T) {
 	logger.L = zap.NewNop()
-	config2.Set(testConfig())
+	config.Set(testConfig())
 	uplink.Stream = uplink.NewDataStream(10)
 	ch, unsub := uplink.Stream.Subscribe()
 	defer unsub()

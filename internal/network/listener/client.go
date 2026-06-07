@@ -15,7 +15,8 @@ type Client struct {
 	Verified bool
 	Addr     string
 	Uptime   time.Time
-	Last     time.Time
+	Last     time.Time // last received from the client
+	LastTX   time.Time // last sent to the client
 	Software string
 	Version  string
 	Filter   string
@@ -46,15 +47,6 @@ func ClientsSnapshot() []*Client {
 	return out
 }
 
-// heardLen returns the number of stations a client has heard, tolerating a nil
-// heard list.
-func heardLen(c *TCPAPRSClient) int {
-	if c.heard == nil {
-		return 0
-	}
-	return c.heard.Len()
-}
-
 // update client list
 func update() {
 	ticker := time.NewTicker(1 * time.Second)
@@ -73,12 +65,16 @@ func update() {
 			}
 			for c := range l.s.clients {
 				// Read the client's mutable fields under its own mutex to
-				// get a consistent snapshot (callsign/heard/conn are all
-				// written while holding c.mu).
+				// get a consistent snapshot (callsign/conn are written while
+				// holding c.mu). lastTX/msgRcpts are atomic.
 				c.mu.Lock()
 				if c.conn == nil {
 					c.mu.Unlock()
 					continue
+				}
+				var lastTX time.Time
+				if ns := c.lastTX.Load(); ns != 0 {
+					lastTX = time.Unix(0, ns)
 				}
 				newClients[c] = &Client{
 					At:       addr,
@@ -88,13 +84,14 @@ func update() {
 					Addr:     c.conn.RemoteAddr().String(),
 					Uptime:   c.uptime,
 					Last:     c.lastActive,
+					LastTX:   lastTX,
 					Software: c.software,
 					Version:  c.version,
 					Filter:   c.filter,
 					// OutQ: bytes currently queued for delivery to the
 					// client (real async output-queue backlog).
 					OutQ:     int(c.outQBytes.Load()),
-					MsgRcpts: heardLen(c),
+					MsgRcpts: int(c.msgRcpts.Load()),
 					Stats:    c.stats.Snapshot(),
 				}
 				c.mu.Unlock()

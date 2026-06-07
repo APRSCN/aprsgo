@@ -114,6 +114,7 @@ func Status(c fiber.Ctx) error {
 			Addr:         v.Addr,
 			Uptime:       v.Uptime,
 			Last:         v.Last,
+			LastTX:       v.LastTX,
 			Software:     v.Software,
 			Version:      v.Version,
 			Filter:       v.Filter,
@@ -144,18 +145,31 @@ func Status(c fiber.Ctx) error {
 
 	sysStatus := system.Snapshot()
 
+	// Process-wide totals combine the inbound client ports with the uplink
+	// link, so the figures reflect the whole server's traffic rather than only
+	// locally-connected clients. RX is everything the server received (client
+	// uploads + uplink downstream); TX is everything it sent (data delivered to
+	// clients + packets pushed upstream). On a feed/igate the uplink downstream
+	// dominates, which is why client-only totals looked empty.
 	gs := listener2.GlobalStats()
+	us := uplink2.Stats.Snapshot()
+	var ulBytesRX, ulBytesRXRate, ulBytesTX, ulBytesTXRate uint64
+	if uc := uplink2.GetClient(); uc != nil {
+		cs := uc.GetStats()
+		ulBytesRX, ulBytesRXRate = cs.TotalRecvBytes, cs.CurrentRecvRate
+		ulBytesTX, ulBytesTXRate = cs.TotalSentBytes, cs.CurrentSentRate
+	}
 	totals := model.ReturnTotals{
 		Clients:       listener2.GlobalClientCount(),
-		PacketRX:      gs.ReceivedPackets,
-		PacketTX:      gs.SentPackets,
-		BytesRX:       gs.ReceivedBytes,
-		BytesTX:       gs.SentBytes,
-		PacketRXRate:  gs.RecvPacketRate,
-		PacketTXRate:  gs.SendPacketRate,
-		BytesRXRate:   gs.RecvByteRate,
-		BytesTXRate:   gs.SendByteRate,
-		Dupes:         gs.ReceivedDups,
+		PacketRX:      gs.ReceivedPackets + us.ReceivedPackets,
+		PacketTX:      gs.SentPackets + us.SentPackets,
+		BytesRX:       gs.ReceivedBytes + ulBytesRX,
+		BytesTX:       gs.SentBytes + ulBytesTX,
+		PacketRXRate:  gs.RecvPacketRate + us.RecvPacketRate,
+		PacketTXRate:  gs.SendPacketRate + us.SendPacketRate,
+		BytesRXRate:   gs.RecvByteRate + ulBytesRXRate,
+		BytesTXRate:   gs.SendByteRate + ulBytesTXRate,
+		Dupes:         gs.ReceivedDups + us.ReceivedDups,
 		PositionCache: historydb.Positions.Len(),
 	}
 
@@ -168,7 +182,8 @@ func Status(c fiber.Ctx) error {
 			Arch:     runtime.GOARCH,
 			ID:       config.Get().Server.ID,
 			Software: meta.ENName,
-			Version:  fmt.Sprintf("%s %s", meta.Version, meta.Nickname),
+			Codename: meta.Nickname,
+			Version:  meta.Version,
 			Now:      timeNow,
 			Uptime:   timeNow.Sub(meta.StartAt).Seconds(),
 			Model:    cpuModel,

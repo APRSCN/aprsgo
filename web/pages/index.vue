@@ -100,7 +100,7 @@ function onLocaleChange(code: string) {
         <img src="/logo.svg" alt="logo" class="h-10 w-10" @error="(e: any) => (e.target.style.display = 'none')" />
         <div>
           <h1 class="text-2xl font-semibold">{{ t('app.title') }}</h1>
-          <p class="text-sm text-gray-500">{{ server?.software }} {{ server?.version }}</p>
+          <p class="text-sm text-gray-500">{{ server?.software }} {{ server?.codename }}</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -139,6 +139,7 @@ function onLocaleChange(code: string) {
         <el-card v-if="server" shadow="never">
           <template #header><span class="font-medium">{{ t('server.title') }}</span></template>
           <el-descriptions :column="1" border size="small">
+            <el-descriptions-item :label="t('server.version')">{{ server.software }} {{ server.version }} {{ server.codename }}</el-descriptions-item>
             <el-descriptions-item :label="t('server.admin')">{{ server.admin }}</el-descriptions-item>
             <el-descriptions-item :label="t('server.email')">{{ server.email }}</el-descriptions-item>
             <el-descriptions-item :label="t('server.osArch')">{{ server.os }} / {{ server.arch }}</el-descriptions-item>
@@ -259,6 +260,9 @@ function onLocaleChange(code: string) {
           </el-table-column>
           <el-table-column :label="t('clients.lastIn')" width="100">
             <template #default="{ row }">{{ timeAgo(row.last) }}</template>
+          </el-table-column>
+          <el-table-column :label="t('clients.lastOut')" width="100">
+            <template #default="{ row }">{{ timeAgo(row.last_tx) }}</template>
           </el-table-column>
           <el-table-column :label="t('clients.software')" min-width="150">
             <template #default="{ row }">

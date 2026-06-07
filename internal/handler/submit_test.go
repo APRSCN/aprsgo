@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	config2 "github.com/APRSCN/aprsgo/internal/infra/config"
+	"github.com/APRSCN/aprsgo/internal/infra/config"
 	"github.com/APRSCN/aprsgo/internal/infra/logger"
 	"github.com/APRSCN/aprsgo/internal/network/uplink"
 	"github.com/gofiber/fiber/v3"
@@ -15,10 +15,10 @@ import (
 
 func testSetup() {
 	logger.L = zap.NewNop()
-	var c config2.StaticConfig
+	var c config.StaticConfig
 	c.Server.ID = "TESTING"
 	c.Server.BuffSize = 128
-	config2.Set(c)
+	config.Set(c)
 	uplink.Stream = uplink.NewDataStream(10)
 }
 

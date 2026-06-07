@@ -1,5 +1,5 @@
-github.com/APRSCN/aprsutils v1.4.0 h1:ez+noWH4vCiW/3F4Msymj5LFlEW7gszHS75YQcqligc=
-github.com/APRSCN/aprsutils v1.4.0/go.mod h1:xqW97duTVPGXfVpMyCkVdN2RUGqpqOFjxJM4elQuas8=
+github.com/APRSCN/aprsutils v1.4.1 h1:TeyfHxtOZS0dcI9BbsmmXj9Z+cQYSh2Ro5FBEOFzsQo=
+github.com/APRSCN/aprsutils v1.4.1/go.mod h1:xqW97duTVPGXfVpMyCkVdN2RUGqpqOFjxJM4elQuas8=
 github.com/andybalholm/brotli v1.2.1 h1:R+f5xP285VArJDRgowrfb9DqL18yVK0gKAW/F+eTWro=
 github.com/andybalholm/brotli v1.2.1/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/bytedance/gopkg v0.1.4 h1:oZnQwnX82KAIWb7033bEwtxvTqXcYMxDBaQxo5JJHWM=

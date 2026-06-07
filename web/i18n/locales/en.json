@@ -17,6 +17,7 @@
   "totals.positionCache": "Position Cache",
 
   "server.title": "Server",
+  "server.version": "Version",
   "server.admin": "Admin",
   "server.email": "Email",
   "server.osArch": "OS / Arch",
@@ -83,7 +84,8 @@
   "clients.no": "no",
   "clients.up": "Up",
   "clients.lastIn": "Last in",
-  "clients.software": "Software",
+  "clients.lastOut": "Last out",
+  "clients.software":"Software",
   "clients.pktsTx": "Pkts Tx",
   "clients.pktsRxDupErr": "Pkts Rx/Dup/Err",
   "clients.bytesTx": "Bytes Tx",

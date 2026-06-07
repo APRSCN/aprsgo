@@ -3,7 +3,7 @@ module github.com/APRSCN/aprsgo
 go 1.26.3
 
 require (
-	github.com/APRSCN/aprsutils v1.4.0
+	github.com/APRSCN/aprsutils v1.4.1
 	github.com/go-co-op/gocron v1.37.0
 	github.com/go-playground/validator/v10 v10.30.3
 	github.com/goccy/go-json v0.10.6

@@ -20,7 +20,7 @@ import (
 	"github.com/APRSCN/aprsgo/internal/meta"
 	"github.com/APRSCN/aprsgo/internal/model"
 	"github.com/APRSCN/aprsgo/internal/network/uplink"
-	historydb2 "github.com/APRSCN/aprsgo/internal/pkg/historydb"
+	"github.com/APRSCN/aprsgo/internal/pkg/historydb"
 	"github.com/APRSCN/aprsgo/internal/security"
 	"github.com/APRSCN/aprsgo/internal/upgrade"
 	"github.com/APRSCN/aprsutils"
@@ -37,9 +37,15 @@ import (
 const serverCommandFilter = "filter"
 
 // Built-in timeout defaults, used when the corresponding config value is 0.
+//
+// The client idle timeout is intentionally long: liveness is detected by TCP
+// keepalive (see applyKeepAlive) plus the periodic application keepalive, not
+// by a short input-idle window. A short window would disconnect healthy
+// stations that simply transmit infrequently (e.g. a phone app running in the
+// background). Override via server.client_timeout in the config.
 const (
 	defaultLoginTimeout  = 30 * time.Second
-	defaultClientTimeout = 60 * time.Second
+	defaultClientTimeout = 48 * time.Hour
 )
 
 // Retention windows for the per-client message-routing state.
@@ -111,19 +117,19 @@ type TCPAPRSClient struct {
 
 	// Server reference and duplicate checking
 	server *TCPAPRSServer
-	dup    *historydb2.DupeChecker
+	dup    *historydb.DupeChecker
 
 	// heard is the set of distinct source callsigns this client has received,
 	// each with a last-heard timestamp. It drives message routing (deliver a
 	// message addressed to a station this client has recently heard) and the
 	// MsgRcpts count.
-	heard *historydb2.HeardList
+	heard *historydb.HeardList
 
 	// courtesy tracks source stations that recently originated a message
 	// delivered to this client. When such a station's next position/object/
 	// item packet arrives, it is delivered once (a "courtesy position") so the
 	// client sees where the correspondent is, then the entry is consumed.
-	courtesy *historydb2.HeardList
+	courtesy *historydb.HeardList
 
 	// dupefeed marks a client connected to a dupefeed port: it additionally
 	// receives packets that were detected as duplicates.
@@ -143,6 +149,17 @@ type TCPAPRSClient struct {
 
 	// Statistics (atomic counters)
 	stats *model.Counters
+
+	// lastTX is the unix-nano time of the most recent line queued for delivery
+	// to this client (0 = never). Read by the status updater from another
+	// goroutine, so it is atomic.
+	lastTX atomic.Int64
+
+	// msgRcpts counts text messages actually delivered to this client (i.e.
+	// addressed to its login or to a station it has heard). It is the
+	// message-recipient count shown in the status page, distinct from the size
+	// of the heard set.
+	msgRcpts atomic.Int64
 
 	// Heartbeat management
 	heartbeatStopChan chan struct{}
@@ -181,6 +198,7 @@ func (c *TCPAPRSClient) Send(data string) (err error) {
 		packetSize := uint64(len(data))
 		c.stats.AddSentBytes(packetSize)
 		c.server.updateServerSendStats(1, packetSize)
+		c.lastTX.Store(time.Now().UnixNano())
 		return nil
 	default:
 		// Queue full: the client cannot keep up. Drop the line and report it.
@@ -342,12 +360,6 @@ func (c *TCPAPRSClient) handleUplinkData() {
 			continue
 		}
 
-		// Record the source station as "heard" by this client (igate message
-		// routing) before deciding delivery. HeardList is itself synchronised.
-		if c.heard != nil && data.Data.From != "" {
-			c.heard.Add(data.Data.From)
-		}
-
 		switch snap.mode {
 		case client.Fullfeed:
 			_ = c.Send(data.Data.Raw)
@@ -386,6 +398,9 @@ type deliverState struct {
 // needs no lock.
 func (c *TCPAPRSClient) shouldDeliver(snap deliverState, pkt parser.Parsed) bool {
 	if c.messageRouted(snap, pkt) {
+		// A text message was routed to this client; count it as a recipient
+		// delivery (the status MsgRcpts figure).
+		c.msgRcpts.Add(1)
 		// Remember the correspondent so a follow-up position is passed through.
 		if c.courtesy != nil && pkt.From != "" {
 			c.courtesy.Add(pkt.From)
@@ -679,9 +694,9 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 		dupefeed:   dupefeed,
 
 		server:   s,
-		dup:      historydb2.NewDupeChecker(30 * time.Second),
-		heard:    historydb2.NewHeardListTTL(heardRetention),
-		courtesy: historydb2.NewHeardListTTL(courtesyRetention),
+		dup:      historydb.NewDupeChecker(30 * time.Second),
+		heard:    historydb.NewHeardListTTL(heardRetention),
+		courtesy: historydb.NewHeardListTTL(courtesyRetention),
 		sendCh:   make(chan []byte, obuf),
 
 		stats: new(model.Counters),
@@ -727,8 +742,15 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 	for {
 		lineCount++
 
-		// Set read timeout
-		_ = conn.SetReadDeadline(time.Now().Add(clientTimeout))
+		// Bound the read by the login timeout until the client has logged in,
+		// then by the (much longer) client idle timeout. Without this, a long
+		// client_timeout would let a connection that never logs in block until
+		// that timeout instead of being dropped promptly.
+		readDeadline := clientTimeout
+		if !c.loggedIn {
+			readDeadline = loginTimeout
+		}
+		_ = conn.SetReadDeadline(time.Now().Add(readDeadline))
 
 		// Disconnect clients that never log in.
 		if time.Since(c.uptime) > loginTimeout && !c.loggedIn {
@@ -741,7 +763,11 @@ func (s *TCPAPRSServer) handleClient(conn net.Conn) {
 			var netErr net.Error
 			switch {
 			case errors.As(err, &netErr) && netErr.Timeout():
-				// Idle past the client timeout with no traffic: drop the link.
+				// A read timed out. Drop the link if it never logged in (past
+				// the login window) or has been idle past the client timeout.
+				if !c.loggedIn {
+					return
+				}
 				if time.Since(c.lastActiveTime()) >= clientTimeout {
 					return
 				}

@@ -13,8 +13,9 @@ type ReturnServer struct {
 	OS       string    `json:"os"`
 	Arch     string    `json:"arch"`
 	ID       string    `json:"id"`
-	Software string    `json:"software"`
-	Version  string    `json:"version"`
+	Software string    `json:"software"` // program name, e.g. "APRSGo"
+	Codename string    `json:"codename"` // release codename, e.g. "Ampere"
+	Version  string    `json:"version"`  // numeric version, e.g. "1.0.0"
 	Now      time.Time `json:"now"`
 	Uptime   float64   `json:"uptime"`
 	Model    string    `json:"model"`
@@ -83,12 +84,13 @@ type ReturnClient struct {
 	Verified     bool      `json:"verified"`
 	Addr         string    `json:"addr"`
 	Uptime       time.Time `json:"uptime"`
-	Last         time.Time `json:"last"`
+	Last         time.Time `json:"last"`    // last received from the client
+	LastTX       time.Time `json:"last_tx"` // last sent to the client
 	Software     string    `json:"software"`
 	Version      string    `json:"version"`
 	Filter       string    `json:"filter"`
 	OutQ         int       `json:"out_q"`     // bytes queued for delivery
-	MsgRcpts     int       `json:"msg_rcpts"` // distinct stations heard
+	MsgRcpts     int       `json:"msg_rcpts"` // text messages delivered to this client
 	PacketRX     uint64    `json:"packet_rx"`
 	PacketRXDup  uint64    `json:"packet_rx_dup"`
 	PacketRXErr  uint64    `json:"packet_rx_err"`
